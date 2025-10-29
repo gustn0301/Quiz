@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>화학식 퀴즈</title>
+<style>
+  * { box-sizing: border-box; font-family: "Noto Sans KR", sans-serif; }
+  html, body { height: 100%; margin: 0; background: #f2f6ff; }
+  body { display: flex; justify-content: center; align-items: center; }
+  section { display: none; flex-direction: column; align-items: center; text-align: center; }
+  #homeSection { display: flex; flex-direction: column; gap: 15px; }
+  button {
+    background: #4c6ef5; color: white; border: none; padding: 12px 24px;
+    border-radius: 10px; cursor: pointer; font-size: 16px;
+    transition: background 0.3s;
+  }
+  button:hover { background: #364fc7; }
+  input { padding: 10px; font-size: 16px; width: 250px; border: 2px solid #4c6ef5; border-radius: 8px; }
+  .correct { color: #2f9e44; font-weight: bold; }
+  .wrong { color: #e03131; font-weight: bold; }
+  #adminSection {
+    width: 100%; max-width: 600px; background: white;
+    border-radius: 12px; padding: 20px; overflow-y: auto; max-height: 90vh;
+  }
+  .admin-item { background: #f8f9fa; border-radius: 10px; padding: 10px; margin-bottom: 12px; text-align: left; }
+  .backHomeBtn { margin-top: 10px; background: #adb5bd; }
+</style>
+</head>
+
+<body>
+
+<section id="homeSection">
+  <h1>🔬 화학식 퀴즈</h1>
+  <button id="startBtn">★퀴즈 시작하기★</button>
+  <button id="adminBtn">관리자 패널</button>
+</section>
+
+<section id="guideSection">
+  <p>위첨자는 '^', 아래첨자는 '_'를 활용하세요.<br>괄호가 필요한 경우 반드시 포함해주세요.<br>아래첨자를 먼저 작성 후 위첨자를 작성해주세요.</p>
+  <button id="guideConfirm">확인</button>
+</section>
+
+<section id="quizSection">
+  <h2 id="modeDisplay">모드: 일반 모드</h2>
+  <div id="quizBox"></div>
+</section>
+
+<section id="adminSection">
+  <h2>관리자 패널</h2>
+  <button id="addQuizBtn">문제 추가</button>
+  <div id="adminList"></div>
+  <button class="backHomeBtn">홈으로 돌아가기</button>
+</section>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+
+// 🔹 Firebase 설정
+const firebaseConfig = {
+  apiKey: "AIzaSyCLXhRToRyjQ1qXkpO37IOXm1JasEzhXNw",
+  authDomain: "quizproject-a64ce.firebaseapp.com",
+  projectId: "quizproject-a64ce",
+  storageBucket: "quizproject-a64ce.firebasestorage.app",
+  messagingSenderId: "14288490981",
+  appId: "1:14288490981:web:11c5bf919120fbf3f09f0c"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// 🔹 변수
+const startBtn = document.getElementById("startBtn");
+const adminBtn = document.getElementById("adminBtn");
+const quizSection = document.getElementById("quizSection");
+const homeSection = document.getElementById("homeSection");
+const guideSection = document.getElementById("guideSection");
+const modeDisplay = document.getElementById("modeDisplay");
+
+let quizList = [];
+let currentIndex = 0;
+let wrongList = [];
+let reverseMode = false; // false = 일반, true = 거꾸로
+
+function showScreen(screen) {
+  [homeSection, guideSection, quizSection, document.getElementById("adminSection")].forEach(s => s.style.display="none");
+  screen.style.display = "flex";
+}
+
+// 🔹 퀴즈 불러오기
+async function loadQuiz() {
+  const snapshot = await getDocs(collection(db, "quizzes"));
+  quizList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  quizList = quizList.sort(() => Math.random() - 0.5);
+}
+
+// 🔹 퀴즈 표시
+function showQuiz() {
+  if (quizList.length === 0) return;
+  if (currentIndex >= quizList.length) {
+    if (wrongList.length > 0) {
+      quizList = [...wrongList]; wrongList = []; currentIndex = 0; showQuiz(); return;
+    } else {
+      document.getElementById("quizBox").innerHTML = `
+        <h2>모든 문제를 맞췄어요!</h2>
+        <button id="goHome">홈으로 돌아가기</button>
+      `;
+      document.getElementById("goHome").onclick = () => showScreen(homeSection);
+      return;
+    }
+  }
+
+  const quiz = quizList[currentIndex];
+  const question = reverseMode ? quiz.answer : quiz.question;
+  const answer = reverseMode ? quiz.question : quiz.answer;
+
+  document.getElementById("quizBox").innerHTML = `
+    <h3>${question}</h3>
+    <input type="text" id="answerInput" placeholder="정답을 입력하세요." />
+    <button id="submitAnswer">확인</button>
+    <div id="result"></div>
+  `;
+
+  const input = document.getElementById("answerInput");
+  const resultDiv = document.getElementById("result");
+
+  // 🔹 자동 포커스
+  input.focus();
+
+  const checkAnswer = () => {
+    const userAnswer = input.value.trim();
+    if (userAnswer === answer.trim()) {
+      resultDiv.innerHTML = `<p class="correct">정답입니다!</p>`;
+    } else {
+      resultDiv.innerHTML = `<p class="wrong">❌ 정답은 ${answer}입니다.</p>`;
+      wrongList.push(quiz);
+    }
+    currentIndex++;
+    setTimeout(showQuiz, 1200);
+  };
+
+  document.getElementById("submitAnswer").onclick = checkAnswer;
+  input.addEventListener("keydown", e => { if(e.key==="Enter") checkAnswer(); });
+}
+
+// 🔹 홈 화면 버튼 이벤트
+startBtn.onclick = () => showScreen(guideSection);
+
+document.getElementById("guideConfirm").onclick = async () => {
+  guideSection.style.display="none";
+  quizSection.style.display="flex";
+  modeDisplay.textContent = reverseMode ? "모드: 거꾸로 모드" : "모드: 일반 모드";
+  await loadQuiz();
+  showQuiz();
+};
+
+// 🔹 관리자 패널
+adminBtn.onclick = async () => {
+  const inputCode = prompt("관리자 코드를 입력하세요:");
+  if (parseInt(inputCode) === 251414) {
+    showScreen(document.getElementById("adminSection"));
+    loadAdminPanel();
+  } else alert("잘못된 코드입니다.");
+};
+
+async function loadAdminPanel() {
+  const snapshot = await getDocs(collection(db, "quizzes"));
+  const adminList = document.getElementById("adminList");
+  adminList.innerHTML = "";
+  snapshot.forEach(docSnap => {
+    const quiz = docSnap.data();
+    const div = document.createElement("div");
+    div.className = "admin-item";
+    div.innerHTML = `
+      <p><b>문제:</b> ${quiz.question}</p>
+      <p><b>정답:</b> ${quiz.answer}</p>
+      <button class="editBtn">수정</button>
+      <button class="deleteBtn">삭제</button>
+    `;
+    adminList.appendChild(div);
+
+    div.querySelector(".editBtn").onclick = async () => {
+      const newQ = prompt("새 문제를 입력하세요:", quiz.question);
+      const newA = prompt("새 정답을 입력하세요:", quiz.answer);
+      if(newQ && newA) await updateDoc(doc(db,"quizzes",docSnap.id),{question:newQ, answer:newA});
+      loadAdminPanel();
+    };
+    div.querySelector(".deleteBtn").onclick = async () => { await deleteDoc(doc(db,"quizzes",docSnap.id)); loadAdminPanel(); };
+  });
+}
+
+document.getElementById("addQuizBtn").onclick = async () => {
+  const q = prompt("문제를 입력하세요:");
+  const a = prompt("정답을 입력하세요:");
+  if(q && a) await addDoc(collection(db,"quizzes"), {question:q, answer:a});
+  loadAdminPanel();
+};
+
+document.querySelectorAll(".backHomeBtn").forEach(btn => btn.onclick = () => showScreen(homeSection));
+
+// 🔹 홈 화면에서 거꾸로 문제풀기 버튼 (토글 방식)
+const reverseModeBtn = document.createElement("button");
+reverseModeBtn.textContent = "거꾸로 문제 모드"; // 초기 이름
+reverseModeBtn.style.marginBottom = "10px";
+
+reverseModeBtn.onclick = () => {
+  reverseMode = !reverseMode; // 모드 토글
+  if (reverseMode) {
+    reverseModeBtn.textContent = "원래 문제 모드"; // 거꾸로 모드일 때 버튼 이름
+    alert("거꾸로 문제풀이 모드로 전환되었습니다!");
+  } else {
+    reverseModeBtn.textContent = "거꾸로 문제풀기"; // 일반 모드로 돌아왔을 때 버튼 이름
+    alert("일반 문제풀이 모드로 돌아왔습니다!");
+  }
+};
+
+// startBtn 위에 추가
+homeSection.insertBefore(reverseModeBtn, startBtn);
+
+</script>
+</body>
+</html>
