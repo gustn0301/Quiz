@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>과학 수행 퀴즈</title>
 
-<!-- Favicon -->
+<!-- Favicon (프로젝트 루트에 favicon.png 를 넣어주세요) -->
 <link rel="icon" href="https://img.icons8.com/color/48/physics.png" type="image/png">
 
 <style>
@@ -29,6 +29,12 @@
   }
   .admin-item { background: #f8f9fa; border-radius: 10px; padding: 10px; margin-bottom: 12px; text-align: left; }
   .backHomeBtn { margin-top: 10px; background: #adb5bd; }
+  #nextBtn {
+    background: #00a676;
+    margin-top: 10px;
+  }
+  #nextBtn:hover { background: #007a56; }
+  #result { margin-top: 10px; min-height: 26px; }
 </style>
 </head>
 
@@ -71,7 +77,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 🔹 변수
+// 🔹 요소 & 변수
 const homeSection = document.getElementById("homeSection");
 const startBtn = document.createElement("button");
 startBtn.id = "startBtn";
@@ -99,16 +105,34 @@ function showScreen(screen) {
 // 🔹 퀴즈 불러오기
 async function loadQuiz() {
   const snapshot = await getDocs(collection(db, "quizzes"));
-  quizList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  quizList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  // 랜덤 섞기
   quizList = quizList.sort(() => Math.random() - 0.5);
 }
 
-// 🔹 퀴즈 표시
+// 🔹 다음으로 진행 (실제 이동)
+function proceedNext() {
+  // awaitingNext 상태 사라짐 handled by showQuiz
+  currentIndex++;
+  showQuiz();
+}
+
+// 🔹 퀴즈 표시 (한 문제)
 function showQuiz() {
-  if (quizList.length === 0) return;
+  if (quizList.length === 0) {
+    document.getElementById("quizBox").innerHTML = "<p>등록된 문제가 없습니다. 관리자에서 문제를 추가하세요.</p>";
+    return;
+  }
+
   if (currentIndex >= quizList.length) {
     if (wrongList.length > 0) {
-      quizList = [...wrongList]; wrongList = []; currentIndex = 0; showQuiz(); return;
+      quizList = [...wrongList];
+      wrongList = [];
+      currentIndex = 0;
+      // 섞어서 재도전하고 싶으면 아래 줄 유지; 아니면 주석 처리
+      quizList = quizList.sort(() => Math.random() - 0.5);
+      showQuiz();
+      return;
     } else {
       document.getElementById("quizBox").innerHTML = `
         <h2>모든 문제를 맞췄어요!</h2>
@@ -123,18 +147,29 @@ function showQuiz() {
   const question = reverseMode ? quiz.answer : quiz.question;
   const answer = reverseMode ? quiz.question : quiz.answer;
 
+  // 렌더링: 입력란에 autocomplete 끄기
   document.getElementById("quizBox").innerHTML = `
     <h3>${question}</h3>
-    <input type="text" id="answerInput" placeholder="정답을 입력하세요." />
-    <button id="submitAnswer">확인</button>
+    <input type="text" id="answerInput" placeholder="정답을 입력하세요." autocomplete="off" />
+    <button id="submitAnswer">정답 확인</button>
     <div id="result"></div>
+    <button id="nextBtn" style="display:none;">다음 문제</button>
   `;
 
   const input = document.getElementById("answerInput");
+  const submitBtn = document.getElementById("submitAnswer");
   const resultDiv = document.getElementById("result");
+  const nextBtn = document.getElementById("nextBtn");
+
+  // 자동 포커스
   input.focus();
 
+  // 상태: 제출(정답확인) 후 다음을 기다리는지 여부
+  let awaitingNext = false;
+
+  // 정답 확인 (한 번 누르면 **결과만** 보여주고 진행은 하지 않음)
   const checkAnswer = () => {
+    if (awaitingNext) return; // 이미 확인된 상태면 무시
     const userAnswer = input.value.trim();
     if (userAnswer === answer.trim()) {
       resultDiv.innerHTML = `<p class="correct">정답입니다!</p>`;
@@ -142,12 +177,40 @@ function showQuiz() {
       resultDiv.innerHTML = `<p class="wrong">❌ 정답은 ${answer}입니다.</p>`;
       wrongList.push(quiz);
     }
-    currentIndex++;
-    setTimeout(showQuiz, 1200);
+    // 이제 다음으로 넘어가기 대기 상태로 전환
+    awaitingNext = true;
+    nextBtn.style.display = "inline-block";
+    // 선택적으로 입력란을 읽기전용으로 만들어 실수입력 방지 (원하면 주석처리)
+    input.setAttribute("readonly", "true");
+    // focus를 nextBtn으로 이동하면 시각적으로도 알기 쉬움
+    nextBtn.focus();
   };
 
-  document.getElementById("submitAnswer").onclick = checkAnswer;
-  input.addEventListener("keydown", e => { if(e.key==="Enter") checkAnswer(); });
+  // 다음 문제로 실제 진행
+  const handleNext = () => {
+    if (!awaitingNext) return; // 확인을 먼저 해야 함
+    // cleanup & 진행
+    awaitingNext = false;
+    // remove readonly to allow typing on next render
+    input.removeAttribute("readonly");
+    proceedNext();
+  };
+
+  // 버튼/키 이벤트 연결
+  submitBtn.onclick = checkAnswer;
+  nextBtn.onclick = handleNext;
+
+  // Enter 키 동작: 1st Enter -> checkAnswer, 2nd Enter -> handleNext
+  input.addEventListener("keydown", function onKey(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (!awaitingNext) {
+        checkAnswer();
+      } else {
+        handleNext();
+      }
+    }
+  });
 }
 
 // 🔹 홈 화면 버튼 이벤트
@@ -157,6 +220,8 @@ document.getElementById("guideConfirm").onclick = async () => {
   guideSection.style.display="none";
   quizSection.style.display="flex";
   modeDisplay.textContent = reverseMode ? "모드: 거꾸로 모드" : "모드: 일반 모드";
+  currentIndex = 0;
+  wrongList = [];
   await loadQuiz();
   showQuiz();
 };
@@ -167,8 +232,9 @@ reverseModeBtn.textContent = "거꾸로 문제풀기";
 reverseModeBtn.style.marginBottom = "10px";
 reverseModeBtn.onclick = () => {
   reverseMode = !reverseMode;
-  if(reverseMode) reverseModeBtn.textContent = "문제풀기";
-  else reverseModeBtn.textContent = "거꾸로 문제풀기";
+  reverseModeBtn.textContent = reverseMode ? "문제풀기" : "거꾸로 문제풀기";
+  // modeDisplay가 보이는 상태라면 바로 갱신
+  modeDisplay.textContent = reverseMode ? "모드: 거꾸로 모드" : "모드: 일반 모드";
 };
 homeSection.insertBefore(reverseModeBtn, startBtn);
 
@@ -203,7 +269,12 @@ async function loadAdminPanel() {
       if(newQ && newA) await updateDoc(doc(db,"quizzes",docSnap.id),{question:newQ, answer:newA});
       loadAdminPanel();
     };
-    div.querySelector(".deleteBtn").onclick = async () => { await deleteDoc(doc(db,"quizzes",docSnap.id)); loadAdminPanel(); };
+    div.querySelector(".deleteBtn").onclick = async () => { 
+      if (confirm("정말 삭제하시겠습니까?")) {
+        await deleteDoc(doc(db,"quizzes",docSnap.id)); 
+        loadAdminPanel();
+      }
+    };
   });
 }
 
