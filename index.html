@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>화학식 퀴즈</title>
+<title>과학 수행 퀴즈</title>
+
+<!-- Favicon -->
+<link rel="icon" href="https://img.icons8.com/color/48/physics.png" type="image/png">
+
 <style>
   * { box-sizing: border-box; font-family: "Noto Sans KR", sans-serif; }
   html, body { height: 100%; margin: 0; background: #f2f6ff; }
@@ -32,8 +36,6 @@
 
 <section id="homeSection">
   <h1>🔬 화학식 퀴즈</h1>
-  <button id="startBtn">★퀴즈 시작하기★</button>
-  <button id="adminBtn">관리자 패널</button>
 </section>
 
 <section id="guideSection">
@@ -70,11 +72,18 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // 🔹 변수
-const startBtn = document.getElementById("startBtn");
-const adminBtn = document.getElementById("adminBtn");
-const quizSection = document.getElementById("quizSection");
 const homeSection = document.getElementById("homeSection");
+const startBtn = document.createElement("button");
+startBtn.id = "startBtn";
+startBtn.textContent = "퀴즈 시작하기";
+const adminBtn = document.createElement("button");
+adminBtn.id = "adminBtn";
+adminBtn.textContent = "관리자 패널";
+homeSection.appendChild(startBtn);
+homeSection.appendChild(adminBtn);
+
 const guideSection = document.getElementById("guideSection");
+const quizSection = document.getElementById("quizSection");
 const modeDisplay = document.getElementById("modeDisplay");
 
 let quizList = [];
@@ -123,8 +132,6 @@ function showQuiz() {
 
   const input = document.getElementById("answerInput");
   const resultDiv = document.getElementById("result");
-
-  // 🔹 자동 포커스
   input.focus();
 
   const checkAnswer = () => {
@@ -153,6 +160,17 @@ document.getElementById("guideConfirm").onclick = async () => {
   await loadQuiz();
   showQuiz();
 };
+
+// 🔹 홈 화면 거꾸로 문제풀기 버튼 (토글)
+const reverseModeBtn = document.createElement("button");
+reverseModeBtn.textContent = "거꾸로 문제풀기";
+reverseModeBtn.style.marginBottom = "10px";
+reverseModeBtn.onclick = () => {
+  reverseMode = !reverseMode;
+  if(reverseMode) reverseModeBtn.textContent = "문제풀기";
+  else reverseModeBtn.textContent = "거꾸로 문제풀기";
+};
+homeSection.insertBefore(reverseModeBtn, startBtn);
 
 // 🔹 관리자 패널
 adminBtn.onclick = async () => {
@@ -197,25 +215,6 @@ document.getElementById("addQuizBtn").onclick = async () => {
 };
 
 document.querySelectorAll(".backHomeBtn").forEach(btn => btn.onclick = () => showScreen(homeSection));
-
-// 🔹 홈 화면에서 거꾸로 문제풀기 버튼 (토글 방식)
-const reverseModeBtn = document.createElement("button");
-reverseModeBtn.textContent = "거꾸로 문제 모드"; // 초기 이름
-reverseModeBtn.style.marginBottom = "10px";
-
-reverseModeBtn.onclick = () => {
-  reverseMode = !reverseMode; // 모드 토글
-  if (reverseMode) {
-    reverseModeBtn.textContent = "원래 문제 모드"; // 거꾸로 모드일 때 버튼 이름
-    alert("거꾸로 문제풀이 모드로 전환되었습니다!");
-  } else {
-    reverseModeBtn.textContent = "거꾸로 문제풀기"; // 일반 모드로 돌아왔을 때 버튼 이름
-    alert("일반 문제풀이 모드로 돌아왔습니다!");
-  }
-};
-
-// startBtn 위에 추가
-homeSection.insertBefore(reverseModeBtn, startBtn);
 
 </script>
 </body>
