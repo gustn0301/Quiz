@@ -4,21 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flash Card</title>
-    <!-- 어울리는 파비콘 (카드 인덱스 이모지) -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗂️</text></svg>">
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter 폰트 (트렌디한 느낌) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <!-- 어울리는 파비콘 (카드 인덱스 이모지) --><link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗂️</text></svg>">
+    <!-- Tailwind CSS CDN --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter 폰트 (트렌디한 느낌) --><link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
     
     <style>
-        /* 기본 스타일 및 트렌디한 MZ 배경 */
+        /* 기본 스타일 */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
         body {
             font-family: 'Nanum Gothic', 'Inter', sans-serif;
             overflow: hidden;
-            color: white;
+            position: relative; /* 저작권 문구를 위해 필요 */
+            color: #333; /* 기본 텍스트 색상 (흰 배경용) */
+            transition: color 0.8s ease;
+        }
+
+        /* 거꾸로 모드 시 body 텍스트 색상 변경 */
+        body.reverse-active {
+            color: white; /* 검은 배경용 */
         }
 
         /* 화면 전환을 위한 기본 클래스 */
@@ -32,47 +41,75 @@
             overflow-y: auto;
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
+            z-index: 10; /* 화면이 배경보다 위에 오도록 */
         }
         
         /* 활성 화면 */
         .screen.active {
-            display: flex;
-            flex-direction: column;
+            display: flex; /* flex-direction: column은 HTML에 직접 적용 */
             opacity: 1;
-            z-index: 10; /* 활성 화면이 위로 오도록 */
         }
 
-        /* 애니메이션 배경 */
+        /* 새로운 배경 스타일 */
         #animated-bg {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1;
-            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-            background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
-            transition: filter 0.8s ease; /* 거꾸로 모드 색상 변경 */
+            z-index: -1; /* -1로 변경하여 무조건 뒤로 보냄 */
+            overflow: hidden;
+            background-color: white; /* 기본 흰색 배경 */
+            transition: background-color 0.8s ease; /* 거꾸로 모드 전환 */
         }
 
-        /* 거꾸로 모드 활성 시 배경 필터 */
         #animated-bg.reverse-active {
-            filter: hue-rotate(180deg);
+            background-color: black; /* 거꾸로 모드 시 검정색 배경 */
         }
 
-        @keyframes gradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        .bg-word {
+            position: absolute;
+            font-weight: bold;
+            white-space: nowrap;
+            opacity: 0.08; /* 빼곡히 채우기 위해 투명도 낮춤 */
+            pointer-events: none; /* 클릭 안 되게 */
+            animation: moveWords linear infinite;
         }
 
-        /* 문제 풀이 화면은 배경 없음 */
+        /* 기본 모드 단어 색상 (흰색 배경에 어울리게) */
+        .bg-word {
+            color: #333;
+        }
+
+        /* 거꾸로 모드 단어 색상 (검정 배경에 어울리게) */
+        #animated-bg.reverse-active .bg-word {
+            color: white;
+            opacity: 0.15; /* 0.08보다 잘 보이게 */
+        }
+
+        @keyframes moveWords {
+            /* 0%: 화면 밖 오른쪽 아래 -> 100%: 화면 밖 왼쪽 위 */
+            0% { transform: translate(100vw, 100vh) rotate(20deg); }
+            100% { transform: translate(-50vw, -100vh) rotate(20deg); }
+        }
+
+        /* 문제 풀이 화면은 배경 없음 + 항상 흰색 텍스트 */
         #quiz-screen.active ~ #animated-bg {
             display: none;
         }
         #quiz-screen {
             background-color: #111827; /* 다크 모드 배경 */
+            color: white;
+        }
+
+        /* 모달 (항상 흰색 텍스트) */
+        #pause-modal, #retake-modal, #alert-modal {
+            color: white;
+        }
+
+        /* 관리자 로그인 (항상 흰색 텍스트) */
+        #admin-login-screen .login-panel {
+            color: white;
         }
 
         /* 스크롤바 스타일링 (WebKit) */
@@ -94,7 +131,7 @@
         /* 선택된 문제 세트 스타일 */
         .set-item.selected {
             background-color: #FBBF24; /* 황색 */
-            color: #1f2937;
+            color: #1f2937; /* 선택 시 텍스트 검정 */
             border-color: #FBBF24;
         }
         
@@ -152,59 +189,104 @@
         input:checked + .slider:before {
             transform: translateX(26px);
         }
+
+        /* 저작권 문구 */
+        #copyright-footer {
+            position: fixed;
+            bottom: 10px;
+            right: 15px;
+            color: #a0a0a0; /* 회색 */
+            font-size: 0.85em;
+            z-index: 100; /* 모든 화면 위에 오도록 */
+        }
+
+        /* 거꾸로 모드: '문제 풀이 시작' 버튼 색상 반전 */
+        body.reverse-active #start-quiz-btn:not(:disabled) {
+            background-color: #ffffff; /* 흰색 배경 */
+            color: #16a34a; /* 초록색 텍스트 (green-600) */
+        }
+        body.reverse-active #start-quiz-btn:not(:disabled):hover {
+            background-color: #e5e5e5; /* 밝은 회색 (hover) */
+        }
+        
+        /* 거꾸로 모드: '문제 풀이 시작' 비활성 버튼 색상 반전 */
+        body.reverse-active #start-quiz-btn:disabled {
+            background-color: #374151; /* 어두운 회색 (gray-700) */
+            color: #9ca3af; /* 밝은 회색 텍스트 (gray-400) */
+            opacity: 0.6;
+        }
+
+        /* 거꾸로 모드: 검색창/리스트창 밝게 */
+        body.reverse-active #search-bar {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        body.reverse-active #problem-list-container {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-white">
+<body class=""> <!-- color: white 제거, body.reverse-active로 제어 -->
 
-    <!-- 애니메이션 배경 -->
-    <div id="animated-bg"></div>
+    <!-- 애니메이션 배경 (JS로 단어 생성) --><div id="animated-bg">
+        <!-- JS로 .bg-word 요소들 생성 -->
+    </div>
 
-    <!-- 로딩 오버레이 -->
-    <div id="loading-overlay" class="screen fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <!-- 저작권 문구 --><div id="copyright-footer">
+        ⓒ 2025 Yun Hyun Su all rights reserved.
+    </div>
+
+    <!-- 로딩 오버레이 --><div id="loading-overlay" class="screen fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
         <div class="loader"></div>
     </div>
 
-    <!-- 1. 메인 화면 -->
-    <div id="main-screen" class="screen active p-6 md:p-10">
-        <header class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl md:text-4xl font-bold">Flash Card</h1>
+    <!-- 1. 메인 화면 (레이아웃 재구성) -->
+    <div id="main-screen" class="screen active flex flex-col p-6 md:p-10 relative"> <!-- position: relative 추가 -->
+        
+        <!-- 헤더 (고정) -->
+        <header class="flex justify-between items-center mb-6 flex-shrink-0">
+            <h1 id="main-title" class="text-3xl md:text-4xl font-bold">Flash Card</h1>
             <button id="main-admin-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
                 관리자 패널
             </button>
         </header>
 
-        <!-- 옵션 -->
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <!-- 거꾸로 모드 토글 -->
-            <div class="flex items-center space-x-3 bg-gray-800 bg-opacity-50 p-3 rounded-lg">
-                <span class="text-lg font-medium">거꾸로 문제 모드</span>
-                <label class="switch">
-                    <input type="checkbox" id="reverse-mode-toggle">
-                    <span class="slider"></span>
-                </label>
+        <!-- 메인 콘텐츠 (스크롤 영역) -->
+        <main class="flex-1 flex flex-col min-h-0"> <!-- min-h-0가 flex-child 스크롤에 중요 -->
+            
+            <!-- 옵션 (고정) -->
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 flex-shrink-0">
+                <!-- 거꾸로 모드 토글 -->
+                <div class="flex items-center space-x-3 bg-gray-800 bg-opacity-70 p-3 rounded-lg text-white">
+                    <span class="text-lg font-medium">거꾸로 문제 모드</span>
+                    <label class="switch">
+                        <input type="checkbox" id="reverse-mode-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <!-- 검색 바 -->
+                <input id="search-bar" type="text" placeholder="문제 세트 검색..." class="w-full md:w-1/2 p-3 rounded-lg bg-gray-800 bg-opacity-70 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-300">
             </div>
-            <!-- 검색 바 -->
-            <input id="search-bar" type="text" placeholder="문제 세트 검색..." class="w-full md:w-1/2 p-3 rounded-lg bg-gray-800 bg-opacity-70 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
 
-        <!-- 문제 리스트 -->
-        <h2 class="text-2xl font-semibold mb-4">문제 리스트</h2>
-        <div id="problem-list-container" class="flex-1 overflow-y-auto space-y-3 p-2 bg-black bg-opacity-20 rounded-lg">
-            <!-- JS로 문제 리스트 렌더링 -->
-            <p id="no-public-sets" class="text-gray-400 text-center">공개된 문제 세트가 없습니다.</p>
-        </div>
+            <!-- 리스트 헤더 (고정) -->
+            <h2 id="problem-list-header" class="text-2xl font-semibold mb-4 flex-shrink-0">문제 리스트</h2>
 
-        <!-- 문제 풀이 시작 버튼 -->
-        <div class="mt-6">
-            <button id="start-quiz-btn" class="w-full bg-green-600 hover:bg-green-700 text-white text-xl font-bold py-4 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                문제 세트를 선택하세요
-            </button>
-        </div>
+            <!-- 문제 리스트 (스크롤) -->
+            <div id="problem-list-container" class="flex-1 overflow-y-auto space-y-3 p-2 bg-black bg-opacity-10 rounded-lg transition-colors duration-300">
+                <p id="no-public-sets" class="text-center">공개된 문제 세트가 없습니다.</p>
+            </div>
+
+            <!-- 문제 풀이 시작 버튼 (고정) -->
+            <div class="mt-6 flex-shrink-0">
+                <button id="start-quiz-btn" class="w-full bg-green-600 hover:bg-green-700 text-white text-xl font-bold py-4 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    문제 세트를 선택하세요
+                </button>
+            </div>
+        </main>
     </div>
 
-    <!-- 2. 관리자 로그인 -->
-    <div id="admin-login-screen" class="screen p-6 md:p-10 justify-center items-center bg-gray-900 bg-opacity-80">
-        <div class="w-full max-w-md bg-gray-800 p-8 rounded-2xl shadow-xl">
+    <!-- 2. 관리자 로그인 --><div id="admin-login-screen" class="screen flex-col p-6 md:p-10 justify-center items-center bg-gray-900 bg-opacity-80">
+        <div class="login-panel w-full max-w-md bg-gray-800 p-8 rounded-2xl shadow-xl text-white"> <!-- text-white 고정 -->
             <h2 class="text-3xl font-bold text-center mb-6">관리자 로그인</h2>
             <p id="login-error" class="text-red-400 text-center mb-4 hidden">비밀번호가 틀렸습니다.</p>
             <input type="password" id="admin-password-input" placeholder="비밀번호" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-6">
@@ -217,25 +299,25 @@
         </div>
     </div>
 
-    <!-- 3. 관리자 패널 (문제 리스트) -->
-    <div id="admin-panel-screen" class="screen p-6 md:p-10">
-        <header class="flex justify-between items-center mb-6">
+    <!-- 3. 관리자 패널 (문제 리스트) --><div id="admin-panel-screen" class="screen flex-col p-6 md:p-10">
+        <header class="flex justify-between items-center mb-6 flex-shrink-0">
             <button id="admin-panel-back-btn" class="text-3xl hover:text-indigo-400 transition-colors">←</button>
             <h1 class="text-3xl font-bold">관리자 패널</h1>
             <button id="admin-add-set-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
                 + 문제 추가하기
             </button>
         </header>
-
-        <h2 class="text-2xl font-semibold mb-4">전체 문제 세트</h2>
-        <div id="admin-problem-list" class="flex-1 overflow-y-auto space-y-3 p-2 bg-black bg-opacity-20 rounded-lg">
-            <!-- JS로 관리자용 리스트 렌더링 -->
-        </div>
+        
+        <main class="flex-1 flex flex-col min-h-0">
+            <h2 class="text-2xl font-semibold mb-4 flex-shrink-0">전체 문제 세트</h2>
+            <div id="admin-problem-list" class="flex-1 overflow-y-auto space-y-3 p-2 bg-black bg-opacity-10 rounded-lg">
+                <!-- JS로 관리자용 리스트 렌더링 -->
+            </div>
+        </main>
     </div>
 
-    <!-- 4. 관리자 - 문제 추가/수정 -->
-    <div id="admin-edit-screen" class="screen p-6 md:p-10">
-        <header class="flex justify-between items-center mb-6">
+    <!-- 4. 관리자 - 문제 추가/수정 --><div id="admin-edit-screen" class="screen flex-col p-6 md:p-10">
+        <header class="flex justify-between items-center mb-6 flex-shrink-0">
             <button id="admin-edit-back-btn" class="text-3xl hover:text-indigo-400 transition-colors">←</button>
             <h1 id="edit-screen-title" class="text-3xl font-bold">문제 세트 만들기</h1>
             <button id="save-set-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
@@ -243,85 +325,88 @@
             </button>
         </header>
 
-        <!-- 문제 세트 정보 -->
-        <div class="mb-6 space-y-4 max-w-2xl mx-auto">
-            <input type="hidden" id="edit-set-id">
-            <div>
-                <label for="set-title-input" class="block text-lg font-medium mb-2">문제 제목 (필수)</label>
-                <input type="text" id="set-title-input" placeholder="예: 2025년 1회 영단어" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <main class="flex-1 overflow-y-auto">
+            <!-- 문제 세트 정보 --><div class="mb-6 space-y-4 max-w-2xl mx-auto">
+                <input type="hidden" id="edit-set-id">
+                <div>
+                    <label for="set-title-input" class="block text-lg font-medium mb-2">문제 제목 (필수)</label>
+                    <input type="text" id="set-title-input" placeholder="예: 2025년 1회 영단어" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="set-description-input" class="block text-lg font-medium mb-2">문제 설명 (선택)</label>
+                    <textarea id="set-description-input" rows="3" placeholder="예: 1과부터 3과까지의 중요 단어" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
             </div>
-            <div>
-                <label for="set-description-input" class="block text-lg font-medium mb-2">문제 설명 (선택)</label>
-                <textarea id="set-description-input" rows="3" placeholder="예: 1과부터 3과까지의 중요 단어" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-            </div>
-        </div>
 
-        <!-- 문제/정답 목록 -->
-        <div class="max-w-2xl mx-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-semibold">문제/정답 목록</h2>
-                <button id="add-qa-pair-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
-                    + 문제 추가하기
-                </button>
+            <!-- 문제/정답 목록 --><div class="max-w-2xl mx-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold">문제/정답 목록</h2>
+                    <button id="add-qa-pair-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
+                        + 문제 추가하기
+                    </button>
+                </div>
+                <div id="qa-list-container" class="space-y-4">
+                    <!-- JS로 Q&A 쌍 렌더링 --></div>
             </div>
-            <div id="qa-list-container" class="space-y-4">
-                <!-- JS로 Q&A 쌍 렌더링 -->
-            </div>
-        </div>
+        </main>
     </div>
 
-    <!-- 5. 문제 풀이 화면 -->
-    <div id="quiz-screen" class="screen p-6 md:p-10 justify-between">
-        <!-- 상단: 중단 버튼 및 진행도 -->
-        <header class="flex justify-between items-center">
+    <!-- 5. 문제 풀이 화면 --><div id="quiz-screen" class="screen flex-col p-6 md:p-10 justify-between text-white"> <!-- text-white 고정 -->
+        <!-- 상단: 중단 버튼 및 진행도 --><header class="flex justify-between items-center flex-shrink-0">
             <button id="pause-btn" class="text-2xl w-10 h-10 flex items-center justify-center bg-gray-700 rounded-full hover:bg-gray-600">
                 ||
             </button>
             <div id="quiz-progress" class="text-lg font-medium">1 / 10</div>
         </header>
         
-        <!-- 문제 -->
-        <div class="flex-1 flex flex-col justify-center items-center text-center px-4">
+        <!-- 문제 --><div class="flex-1 flex flex-col justify-center items-center text-center px-4">
             <div id="question-text" class="text-4xl md:text-6xl font-bold mb-12 p-6 bg-gray-800 rounded-2xl min-h-[150px] flex items-center justify-center w-full max-w-3xl">
                 Question
             </div>
 
-            <!-- 답안 입력 -->
-            <input type="text" id="answer-input" placeholder="정답을 입력하세요" class="w-full max-w-xl p-4 text-2xl rounded-lg bg-gray-700 border border-gray-600 text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <!-- 답안 입력 --><input type="text" id="answer-input" placeholder="정답을 입력하세요" class="w-full max-w-xl p-4 text-2xl rounded-lg bg-gray-700 border border-gray-600 text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
 
-            <!-- 피드백 -->
-            <div id="feedback-message" class="mt-6 text-2xl font-semibold h-10"></div>
+            <!-- 피드백 --><div id="feedback-message" class="mt-6 text-2xl font-semibold h-10"></div>
             
-            <!-- 다음 버튼 (틀렸을 때) -->
-            <button id="next-question-btn" class="hidden mt-4 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg">
+            <!-- 다음 버튼 (틀렸을 때) --><button id="next-question-btn" class="hidden mt-4 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg">
                 다음 →
             </button>
         </div>
 
-        <!-- 하단 (빈 공간) -->
-        <div></div>
+        <!-- 하단 (빈 공간) --><div class="flex-shrink-0"></div>
     </div>
 
-    <!-- 중단 모달 -->
-    <div id="pause-modal" class="screen fixed inset-0 bg-black bg-opacity-80 flex-col justify-center items-center z-40">
-        <h2 class="text-4xl font-bold mb-8">중단</h2>
-        <div class="space-y-4">
-            <button id="continue-quiz-btn" class="w-64 bg-green-600 hover:bg-green-700 text-white text-xl font-bold py-4 px-6 rounded-lg">
-                이어 풀기
-            </button>
-            <button id="quit-quiz-btn" class="w-64 bg-red-600 hover:bg-red-700 text-white text-xl font-bold py-4 px-6 rounded-lg">
-                그만 풀기
+    <!-- 6. 중단 모달 --><div id="pause-modal" class="screen flex-col justify-center items-center z-40 text-white"> <!-- text-white 고정 -->
+        <div class="fixed inset-0 bg-black bg-opacity-80"></div>
+        <div class="relative z-10">
+            <h2 class="text-4xl font-bold mb-8">중단</h2>
+            <div class="space-y-4">
+                <button id="continue-quiz-btn" class="w-64 bg-green-600 hover:bg-green-700 text-white text-xl font-bold py-4 px-6 rounded-lg">
+                    이어 풀기
+                </button>
+                <button id="quit-quiz-btn" class="w-64 bg-red-600 hover:bg-red-700 text-white text-xl font-bold py-4 px-6 rounded-lg">
+                    그만 풀기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. 오답 재풀이 알림 --><div id="retake-modal" class="screen flex-col justify-center items-center z-40 text-white"> <!-- text-white 고정 -->
+        <div class="fixed inset-0 bg-black bg-opacity-80"></div>
+        <h2 class="text-4xl font-bold relative z-10">틀린 문제 다시 풀기</h2>
+    </div>
+
+    <!-- 8. 커스텀 알림 모달 --><div id="alert-modal" class="screen flex-col justify-center items-center z-50 text-white"> <!-- text-white 고정 -->
+        <div class="fixed inset-0 bg-black bg-opacity-80"></div>
+        <div class="relative z-10 bg-gray-800 p-8 rounded-2xl shadow-xl text-center max-w-sm w-full mx-4">
+            <h2 id="alert-message" class="text-2xl font-bold mb-6 text-white">알림 메시지</h2>
+            <button id="alert-ok-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg">
+                확인
             </button>
         </div>
     </div>
 
-    <!-- 오답 재풀이 알림 -->
-    <div id="retake-modal" class="screen fixed inset-0 bg-black bg-opacity-80 flex-col justify-center items-center z-40">
-        <h2 class="text-4xl font-bold">틀린 문제 다시 풀기</h2>
-    </div>
-
-    <!-- Firebase SDK -->
-    <script type="module">
+    <!-- Firebase SDK --><script type="module">
         // Firebase (제공된 내용 대신 캔버스 환경 변수 사용)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
@@ -344,13 +429,10 @@
             where, 
             getDocs, 
             serverTimestamp,
-            setLogLevel
+            setLogLevel,
+            increment // ⭐️ 1. 완료 횟수 카운트를 위해 'increment' 임포트
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase 설정 (캔버스 환경 변수 -> GitHub Pages용 하드코딩)
-        // const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-flashcard-app';
-        
         let firebaseConfig, appId;
 
         // 캔버스 환경인지 확인
@@ -380,6 +462,8 @@
         let isReverseMode = false;
         let mainListUnsubscribe = null; // 메인 리스트 리스너
         let adminListUnsubscribe = null; // 관리자 리스트 리스너
+        let lastActiveScreen = 'mainScreen'; // 알림 모달을 위한 마지막 화면 저장
+        let afterAlertCallback = null; // 알림 모달 확인 후 콜백
 
         // 퀴즈 상태
         let currentQuiz = {
@@ -396,9 +480,11 @@
             animatedBg: document.getElementById('animated-bg'),
             // 메인
             mainScreen: document.getElementById('main-screen'),
+            mainTitle: document.getElementById('main-title'), // H1 (Flash Card)
             adminPanelBtn: document.getElementById('main-admin-btn'),
             reverseToggle: document.getElementById('reverse-mode-toggle'),
             searchBar: document.getElementById('search-bar'),
+            problemListHeader: document.getElementById('problem-list-header'), // H2 (문제 리스트)
             problemListContainer: document.getElementById('problem-list-container'),
             noPublicSets: document.getElementById('no-public-sets'),
             startQuizBtn: document.getElementById('start-quiz-btn'),
@@ -436,6 +522,9 @@
             continueQuizBtn: document.getElementById('continue-quiz-btn'),
             quitQuizBtn: document.getElementById('quit-quiz-btn'),
             retakeModal: document.getElementById('retake-modal'),
+            alertModal: document.getElementById('alert-modal'),
+            alertMessage: document.getElementById('alert-message'),
+            alertOkBtn: document.getElementById('alert-ok-btn'),
         };
 
         // --- 유틸리티 함수 ---
@@ -444,8 +533,18 @@
             dom.loadingOverlay.style.display = show ? 'flex' : 'none';
         }
 
+        // 알림 모달
+        function showAlert(message, callback = null) {
+            dom.alertMessage.textContent = message;
+            afterAlertCallback = callback;
+            showScreen('alertModal');
+        }
+
         // 화면 전환
         function showScreen(screenId) {
+            if (screenId !== 'alertModal' && screenId !== 'pauseModal' && screenId !== 'retakeModal') {
+                lastActiveScreen = screenId;
+            }
             Object.values(screens).forEach(screen => screen.classList.remove('active'));
             if (screens[screenId]) {
                 screens[screenId].classList.add('active');
@@ -463,6 +562,30 @@
             return timestamp.toDate().toLocaleDateString('ko-KR');
         }
 
+        // 배경 단어 생성
+        function generateBackgroundWords() {
+            const words = [
+                '국어', '수학', '과학', '영어', '역사', '사회', '미술', '음악', '코딩', 
+                '논술', '물리', '화학', '생명', '지구과학', 'Literature', 'Calculus', 
+                'Science', 'English', 'History', 'Coding', 'Physics', 'Chemistry',
+                'Algorithm', 'Data', 'React', 'Python', 'Java', 'C++', 'Node.js'
+            ];
+            const container = dom.animatedBg;
+            const wordCount = 40; // 단어 밀도
+
+            for (let i = 0; i < wordCount; i++) {
+                const span = document.createElement('span');
+                span.className = 'bg-word';
+                span.textContent = words[Math.floor(Math.random() * words.length)];
+                span.style.left = `${Math.random() * 100}vw`;
+                span.style.top = `${Math.random() * 100}vh`;
+                span.style.fontSize = `${2 + Math.random() * 3}em`;
+                span.style.animationDelay = `${Math.random() * -40}s`; // 음수 딜레이로 즉시 시작
+                span.style.animationDuration = `${20 + Math.random() * 20}s`; // 다양한 속도
+                container.appendChild(span);
+            }
+        }
+
         // --- 초기화 ---
 
         async function initialize() {
@@ -474,7 +597,14 @@
             screens.quizScreen = dom.quizScreen;
             screens.pauseModal = dom.pauseModal;
             screens.retakeModal = dom.retakeModal;
+            screens.alertModal = dom.alertModal;
 
+            // 배경 생성
+            generateBackgroundWords();
+            
+            // 초기 색상 설정
+            handleReverseToggle({ target: { checked: false } }); // isReverseMode = false
+            
             showLoading(true);
             try {
                 app = initializeApp(firebaseConfig);
@@ -525,7 +655,7 @@
                 showScreen('mainScreen');
             } catch (error) {
                 console.error("Firebase 초기화 실패:", error);
-                alert("앱을 초기화하는 데 실패했습니다. 인터넷 연결을 확인하세요.");
+                showAlert("앱을 초기화하는 데 실패했습니다. 인터넷 연결을 확인하세요.");
             } finally {
                 showLoading(false);
             }
@@ -573,7 +703,7 @@
             const query = dom.searchBar.value.toLowerCase();
             const filteredSets = sets.filter(set => 
                 set.title.toLowerCase().includes(query) || 
-                set.description.toLowerCase().includes(query)
+                (set.description && set.description.toLowerCase().includes(query))
             );
 
             if (filteredSets.length === 0) {
@@ -586,7 +716,7 @@
             filteredSets.forEach(set => {
                 const isSelected = set.id === selectedSetId;
                 const setEl = document.createElement('div');
-                setEl.className = `set-item p-4 border-2 border-gray-700 rounded-lg cursor-pointer transition-all bg-gray-800 bg-opacity-70 hover:bg-gray-700 ${isSelected ? 'selected' : ''}`;
+                setEl.className = `set-item p-4 border-2 border-gray-700 rounded-lg cursor-pointer transition-all bg-gray-800 bg-opacity-70 hover:bg-gray-700 ${isSelected ? 'selected' : ''} text-white`;
                 setEl.dataset.id = set.id;
 
                 setEl.innerHTML = `
@@ -594,7 +724,11 @@
                         <div>
                             <h3 class="text-xl font-bold">${set.title}</h3>
                             <p class="text-gray-300 mt-1">${set.description || '설명 없음'}</p>
-                            <p class="text-sm text-gray-400 mt-2">최종 수정: ${formatDate(set.lastModified)}</p>
+                            <p class="text-sm text-gray-400 mt-2">
+                                최종 수정: ${formatDate(set.lastModified)}
+                                <!-- ⭐️ 2. 완료 횟수 표시 -->
+                                <span class="ml-3 font-medium text-yellow-400">(${set.completionCount || 0}회 완료됨)</span>
+                            </p>
                         </div>
                         ${isSelected ? '<span class="selected-text text-sm font-bold bg-yellow-300 text-yellow-900 px-2 py-1 rounded">선택됨</span>' : ''}
                     </div>
@@ -610,7 +744,7 @@
         function renderAdminProblemList(sets) {
             dom.adminProblemList.innerHTML = '';
             if (sets.length === 0) {
-                dom.adminProblemList.innerHTML = '<p class="text-gray-400 text-center">문제 세트가 없습니다. 새로 추가해보세요.</p>';
+                dom.adminProblemList.innerHTML = '<p class="text-center">문제 세트가 없습니다. 새로 추가해보세요.</p>';
                 return;
             }
 
@@ -619,17 +753,20 @@
 
             sortedSets.forEach(set => {
                 const setEl = document.createElement('div');
-                setEl.className = 'p-4 border border-gray-700 rounded-lg bg-gray-800 flex justify-between items-center';
+                setEl.className = 'p-4 border border-gray-700 rounded-lg bg-gray-800 flex justify-between items-center text-white'; // text-white 고정
                 
                 setEl.innerHTML = `
                     <div class="flex-1">
                         <h3 class="text-xl font-bold ${set.isPublic ? 'text-green-400' : 'text-gray-400'}">${set.title} ${set.isPublic ? '(공개됨)' : '(비공개)'}</h3>
                         <p class="text-gray-300">${set.description || '설명 없음'}</p>
-                        <p class="text-sm text-gray-500">수정: ${formatDate(set.lastModified)}</p>
+                        <p class="text-sm text-gray-500">
+                            수정: ${formatDate(set.lastModified)}
+                            <!-- ⭐️ 2. (관리자) 완료 횟수 표시 -->
+                            <span class="ml-3 font-medium text-yellow-500">(${set.completionCount || 0}회 완료)</span>
+                        </p>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <!-- 공개/비공개 토글 -->
-                        <label class="switch" title="${set.isPublic ? '비공개로' : '공개로'}">
+                        <!-- 공개/비공개 토글 --><label class="switch" title="${set.isPublic ? '비공개로' : '공개로'}">
                             <input type="checkbox" class="toggle-public" data-id="${set.id}" ${set.isPublic ? 'checked' : ''}>
                             <span class="slider"></span>
                         </label>
@@ -689,7 +826,7 @@
             // 관리자 패널
             dom.adminPanelBackBtn.addEventListener('click', () => {
                 if(adminListUnsubscribe) adminListUnsubscribe(); // 리스너 해제
-                showScreen('mainScreen');
+                showScreen('mainScreen'); // 메인으로
             });
             dom.adminAddSetBtn.addEventListener('click', () => handleShowEditScreen());
 
@@ -703,7 +840,6 @@
             dom.continueQuizBtn.addEventListener('click', () => showScreen('quizScreen'));
             dom.quitQuizBtn.addEventListener('click', () => {
                 showScreen('mainScreen');
-                // 퀴즈 상태 리셋 (필요시)
             });
             dom.nextQuestionBtn.addEventListener('click', nextQuestion);
             dom.answerInput.addEventListener('keydown', (e) => {
@@ -714,6 +850,16 @@
                     } else if (!dom.feedbackMessage.textContent) {
                         checkAnswer();
                     }
+                }
+            });
+
+            // 알림 모달
+            dom.alertOkBtn.addEventListener('click', () => {
+                if (afterAlertCallback) {
+                    afterAlertCallback();
+                    afterAlertCallback = null;
+                } else {
+                    showScreen(lastActiveScreen); // 기본: 이전 화면으로
                 }
             });
         }
@@ -743,6 +889,19 @@
         function handleReverseToggle(e) {
             isReverseMode = e.target.checked;
             dom.animatedBg.classList.toggle('reverse-active', isReverseMode);
+            document.body.classList.toggle('reverse-active', isReverseMode);
+            
+            // H1, H2, P 태그 색상 동적 변경
+            const newColor = isReverseMode ? 'white' : '#333';
+            if (dom.mainTitle) {
+                dom.mainTitle.style.color = newColor;
+            }
+            if (dom.problemListHeader) {
+                dom.problemListHeader.style.color = newColor;
+            }
+            if (dom.noPublicSets) {
+                dom.noPublicSets.style.color = newColor;
+            }
         }
 
         // 메인: 문제 세트 선택
@@ -759,11 +918,9 @@
         function handleStartQuiz() {
             if (!selectedSetId) return;
 
-            // 전체 캐시에서 선택된 세트 찾기 (공개/비공개 상관없이 시작 가능해야 함)
-            // 아님, 메인에서는 공개된 것만 시작 가능.
             const set = publicProblemSets.find(s => s.id === selectedSetId);
             if (!set || !set.questions || set.questions.length === 0) {
-                alert("문제가 없는 세트입니다.");
+                showAlert("문제가 없는 세트입니다.");
                 return;
             }
 
@@ -812,7 +969,7 @@
         async function handleSaveSet() {
             const title = dom.setTitleInput.value.trim();
             if (!title) {
-                alert("문제 제목은 필수입니다.");
+                showAlert("문제 제목은 필수입니다.");
                 return;
             }
 
@@ -831,7 +988,7 @@
             });
 
             if (questions.length === 0) {
-                alert("하나 이상의 문제와 정답을 입력해야 합니다.");
+                showAlert("하나 이상의 문제와 정답을 입력해야 합니다.");
                 return;
             }
 
@@ -851,6 +1008,7 @@
                 } else {
                     // 새로 추가 (기본 비공개)
                     setData.isPublic = false;
+                    setData.completionCount = 0; // ⭐️ 3. 새로 만들 때 0으로 초기화
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'flashcard-sets'), setData);
                 }
                 showLoading(false);
@@ -858,20 +1016,21 @@
             } catch (error) {
                 showLoading(false);
                 console.error("저장 실패:", error);
-                alert("저장에 실패했습니다.");
+                showAlert("저장에 실패했습니다.");
             }
         }
 
         // 관리자: 삭제
         async function handleDeleteSet(setId) {
-            // (요청사항: 확인 창 금지)
+            // (요청사항: 확인 창 금지 -> 대신 커스텀 알림 사용)
+            // 실제 삭제 로직은 확인 후에만 실행해야 하지만, 요청대로 일단 바로 삭제
             showLoading(true);
             try {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'flashcard-sets', setId);
                 await deleteDoc(docRef);
             } catch (error) {
                 console.error("삭제 실패:", error);
-                alert("삭제에 실패했습니다.");
+                showAlert("삭제에 실패했습니다.");
             } finally {
                 showLoading(false);
             }
@@ -885,13 +1044,29 @@
                 await updateDoc(docRef, { isPublic });
             } catch (error) {
                 console.error("공개 상태 변경 실패:", error);
-                alert("공개 상태 변경에 실패했습니다.");
+                showAlert("공개 상태 변경에 실패했습니다.");
             } finally {
                 showLoading(false);
             }
         }
 
         // --- 퀴즈 로직 ---
+
+        // ⭐️ 4. 완료 횟수 증가 함수
+        async function incrementCompletionCount(setId) {
+            if (!setId) return;
+            console.log(`Incrementing completion count for set: ${setId}`);
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'flashcard-sets', setId);
+            try {
+                // 'completionCount' 필드를 1 증가시킴
+                await updateDoc(docRef, {
+                    completionCount: increment(1)
+                });
+            } catch (error) {
+                console.error("Failed to increment completion count:", error);
+                // 이것은 백그라운드 작업이므로 사용자에게 오류를 표시하지 않음
+            }
+        }
         
         // 피셔-예이츠 셔플
         function shuffle(array) {
@@ -991,8 +1166,14 @@
 
             } else {
                 // 모든 문제를 맞힘 (또는 오답 재풀이 종료)
-                alert(currentQuiz.isRetakeRound ? "오답 정복 완료! 메인으로 돌아갑니다." : "완벽합니다! 모든 문제를 맞혔습니다.");
-                showScreen('mainScreen');
+                
+                // ⭐️ 5. 퀴즈를 성공적으로 완료했으므로 카운트 증가
+                incrementCompletionCount(selectedSetId); 
+
+                const message = currentQuiz.isRetakeRound ? "오답 정복 완료! 메인으로 돌아갑니다." : "완벽합니다! 모든 문제를 맞혔습니다.";
+                showAlert(message, () => {
+                    showScreen('mainScreen');
+                });
             }
         }
 
@@ -1002,6 +1183,4 @@
     </script>
 </body>
 </html>
-
-
 
