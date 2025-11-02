@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flash Card</title>
+    <!-- 어울리는 파비콘 (카드 인덱스 이모지) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗂️</text></svg>">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter 폰트 (트렌디한 느낌) -->
@@ -345,9 +347,31 @@
             setLogLevel
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase 설정 (캔버스 환경 변수)
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-flashcard-app';
+        // Firebase 설정 (캔버스 환경 변수 -> GitHub Pages용 하드코딩)
+        // const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-flashcard-app';
+        
+        let firebaseConfig, appId;
+
+        // 캔버스 환경인지 확인
+        if (typeof __firebase_config !== 'undefined' && typeof __app_id !== 'undefined') {
+            // 캔버스 환경 변수 사용
+            firebaseConfig = JSON.parse(__firebase_config);
+            appId = __app_id;
+            console.log("Running in Canvas environment.");
+        } else {
+            // GitHub Pages 등 독립 환경을 위한 하드코딩된 값
+            console.log("Running in standalone environment (e.g., GitHub Pages).");
+            firebaseConfig = {
+                apiKey: "AIzaSyCLXhRToRyjQ1qXkpO37IOXm1JasEzhXNw",
+                authDomain: "quizproject-a64ce.firebaseapp.com",
+                projectId: "quizproject-a64ce",
+                storageBucket: "quizproject-a64ce.firebasestorage.app",
+                messagingSenderId: "14288490981",
+                appId: "1:14288490981:web:11c5bf919120fbf3f09f0c"
+            };
+            appId = 'mz-flashcard-github-io';
+        }
         
         let app, db, auth, userId;
         let problemSetsCache = []; // 전체 문제 세트 캐시
@@ -466,7 +490,8 @@
                             userId = user.uid;
                             console.log("User already signed in:", userId);
                             resolve();
-                        } else if (typeof __initial_auth_token !== 'undefined') {
+                        // 캔버스 환경일 때만 커스텀 토큰 시도
+                        } else if (typeof __initial_auth_token !== 'undefined' && typeof __app_id !== 'undefined') {
                             try {
                                 const userCredential = await signInWithCustomToken(auth, __initial_auth_token);
                                 userId = userCredential.user.uid;
@@ -477,6 +502,7 @@
                                 reject(error);
                             }
                         } else {
+                            // 독립 환경이거나 캔버스에서 토큰이 없는 경우 익명 로그인
                             try {
                                 const userCredential = await signInAnonymously(auth);
                                 userId = userCredential.user.uid;
@@ -976,4 +1002,6 @@
     </script>
 </body>
 </html>
+
+
 
