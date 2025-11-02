@@ -1,292 +1,979 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>과학 수행 퀴즈</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>트렌디 플래시카드</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter 폰트 (트렌디한 느낌) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 기본 스타일 및 트렌디한 MZ 배경 */
+        body {
+            font-family: 'Nanum Gothic', 'Inter', sans-serif;
+            overflow: hidden;
+            color: white;
+        }
 
-<!-- Favicon (프로젝트 루트에 favicon.png 를 넣어주세요) -->
-<link rel="icon" href="https://img.icons8.com/color/48/physics.png" type="image/png">
+        /* 화면 전환을 위한 기본 클래스 */
+        .screen {
+            display: none; /* 기본적으로 모든 화면 숨김 */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        /* 활성 화면 */
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+            opacity: 1;
+            z-index: 10; /* 활성 화면이 위로 오도록 */
+        }
 
-<style>
-  * { box-sizing: border-box; font-family: "Noto Sans KR", sans-serif; }
-  html, body { height: 100%; margin: 0; background: #f2f6ff; }
-  body { display: flex; justify-content: center; align-items: center; }
-  section { display: none; flex-direction: column; align-items: center; text-align: center; }
-  #homeSection { display: flex; flex-direction: column; gap: 15px; }
-  button {
-    background: #4c6ef5; color: white; border: none; padding: 12px 24px;
-    border-radius: 10px; cursor: pointer; font-size: 16px;
-    transition: background 0.3s;
-  }
-  button:hover { background: #364fc7; }
-  input { padding: 10px; font-size: 16px; width: 250px; border: 2px solid #4c6ef5; border-radius: 8px; }
-  .correct { color: #2f9e44; font-weight: bold; }
-  .wrong { color: #e03131; font-weight: bold; }
-  #adminSection {
-    width: 100%; max-width: 600px; background: white;
-    border-radius: 12px; padding: 20px; overflow-y: auto; max-height: 90vh;
-  }
-  .admin-item { background: #f8f9fa; border-radius: 10px; padding: 10px; margin-bottom: 12px; text-align: left; }
-  .backHomeBtn { margin-top: 10px; background: #adb5bd; }
-  #nextBtn {
-    background: #00a676;
-    margin-top: 10px;
-  }
-  #nextBtn:hover { background: #007a56; }
-  #result { margin-top: 10px; min-height: 26px; }
-</style>
+        /* 애니메이션 배경 */
+        #animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            transition: filter 0.8s ease; /* 거꾸로 모드 색상 변경 */
+        }
+
+        /* 거꾸로 모드 활성 시 배경 필터 */
+        #animated-bg.reverse-active {
+            filter: hue-rotate(180deg);
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 문제 풀이 화면은 배경 없음 */
+        #quiz-screen.active ~ #animated-bg {
+            display: none;
+        }
+        #quiz-screen {
+            background-color: #111827; /* 다크 모드 배경 */
+        }
+
+        /* 스크롤바 스타일링 (WebKit) */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #2d3748;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
+
+        /* 선택된 문제 세트 스타일 */
+        .set-item.selected {
+            background-color: #FBBF24; /* 황색 */
+            color: #1f2937;
+            border-color: #FBBF24;
+        }
+        
+        /* 로딩 스피너 */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 토글 스위치 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
 </head>
+<body class="bg-gray-900 text-white">
 
-<body>
+    <!-- 애니메이션 배경 -->
+    <div id="animated-bg"></div>
 
-<section id="homeSection">
-  <h1>🔬 화학식 퀴즈</h1>
-</section>
+    <!-- 로딩 오버레이 -->
+    <div id="loading-overlay" class="screen fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="loader"></div>
+    </div>
 
-<section id="guideSection">
-  <p>위첨자는 '^', 아래첨자는 '_'를 활용하세요.<br>괄호가 필요한 경우 반드시 포함해주세요.<br>아래첨자를 먼저 작성 후 위첨자를 작성해주세요.</p>
-  <button id="guideConfirm">확인</button>
-</section>
+    <!-- 1. 메인 화면 -->
+    <div id="main-screen" class="screen active p-6 md:p-10">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold">MZ 플래시카드</h1>
+            <button id="main-admin-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                관리자 패널
+            </button>
+        </header>
 
-<section id="quizSection">
-  <h2 id="modeDisplay">모드: 일반 모드</h2>
-  <div id="quizBox"></div>
-</section>
+        <!-- 옵션 -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <!-- 거꾸로 모드 토글 -->
+            <div class="flex items-center space-x-3 bg-gray-800 bg-opacity-50 p-3 rounded-lg">
+                <span class="text-lg font-medium">거꾸로 문제 모드</span>
+                <label class="switch">
+                    <input type="checkbox" id="reverse-mode-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <!-- 검색 바 -->
+            <input id="search-bar" type="text" placeholder="문제 세트 검색..." class="w-full md:w-1/2 p-3 rounded-lg bg-gray-800 bg-opacity-70 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
 
-<section id="adminSection">
-  <h2>관리자 패널</h2>
-  <button id="addQuizBtn">문제 추가</button>
-  <div id="adminList"></div>
-  <button class="backHomeBtn">홈으로 돌아가기</button>
-</section>
+        <!-- 문제 리스트 -->
+        <h2 class="text-2xl font-semibold mb-4">문제 리스트</h2>
+        <div id="problem-list-container" class="flex-1 overflow-y-auto space-y-3 p-2 bg-black bg-opacity-20 rounded-lg">
+            <!-- JS로 문제 리스트 렌더링 -->
+            <p id="no-public-sets" class="text-gray-400 text-center">공개된 문제 세트가 없습니다.</p>
+        </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+        <!-- 문제 풀이 시작 버튼 -->
+        <div class="mt-6">
+            <button id="start-quiz-btn" class="w-full bg-green-600 hover:bg-green-700 text-white text-xl font-bold py-4 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                문제 세트를 선택하세요
+            </button>
+        </div>
+    </div>
 
-// 🔹 Firebase 설정
-const firebaseConfig = {
-  apiKey: "AIzaSyCLXhRToRyjQ1qXkpO37IOXm1JasEzhXNw",
-  authDomain: "quizproject-a64ce.firebaseapp.com",
-  projectId: "quizproject-a64ce",
-  storageBucket: "quizproject-a64ce.firebasestorage.app",
-  messagingSenderId: "14288490981",
-  appId: "1:14288490981:web:11c5bf919120fbf3f09f0c"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+    <!-- 2. 관리자 로그인 -->
+    <div id="admin-login-screen" class="screen p-6 md:p-10 justify-center items-center bg-gray-900 bg-opacity-80">
+        <div class="w-full max-w-md bg-gray-800 p-8 rounded-2xl shadow-xl">
+            <h2 class="text-3xl font-bold text-center mb-6">관리자 로그인</h2>
+            <p id="login-error" class="text-red-400 text-center mb-4 hidden">비밀번호가 틀렸습니다.</p>
+            <input type="password" id="admin-password-input" placeholder="비밀번호" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-6">
+            <button id="admin-login-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                접속
+            </button>
+            <button id="admin-login-back-btn" class="w-full text-center text-gray-400 hover:text-white mt-6">
+                메인으로 돌아가기
+            </button>
+        </div>
+    </div>
 
-// 🔹 요소 & 변수
-const homeSection = document.getElementById("homeSection");
-const startBtn = document.createElement("button");
-startBtn.id = "startBtn";
-startBtn.textContent = "퀴즈 시작하기";
-const adminBtn = document.createElement("button");
-adminBtn.id = "adminBtn";
-adminBtn.textContent = "관리자 패널";
-homeSection.appendChild(startBtn);
-homeSection.appendChild(adminBtn);
+    <!-- 3. 관리자 패널 (문제 리스트) -->
+    <div id="admin-panel-screen" class="screen p-6 md:p-10">
+        <header class="flex justify-between items-center mb-6">
+            <button id="admin-panel-back-btn" class="text-3xl hover:text-indigo-400 transition-colors">←</button>
+            <h1 class="text-3xl font-bold">관리자 패널</h1>
+            <button id="admin-add-set-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                + 문제 추가하기
+            </button>
+        </header>
 
-const guideSection = document.getElementById("guideSection");
-const quizSection = document.getElementById("quizSection");
-const modeDisplay = document.getElementById("modeDisplay");
+        <h2 class="text-2xl font-semibold mb-4">전체 문제 세트</h2>
+        <div id="admin-problem-list" class="flex-1 overflow-y-auto space-y-3 p-2 bg-black bg-opacity-20 rounded-lg">
+            <!-- JS로 관리자용 리스트 렌더링 -->
+        </div>
+    </div>
 
-let quizList = [];
-let currentIndex = 0;
-let wrongList = [];
-let reverseMode = false; // false = 일반, true = 거꾸로
+    <!-- 4. 관리자 - 문제 추가/수정 -->
+    <div id="admin-edit-screen" class="screen p-6 md:p-10">
+        <header class="flex justify-between items-center mb-6">
+            <button id="admin-edit-back-btn" class="text-3xl hover:text-indigo-400 transition-colors">←</button>
+            <h1 id="edit-screen-title" class="text-3xl font-bold">문제 세트 만들기</h1>
+            <button id="save-set-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                저장하기
+            </button>
+        </header>
 
-function showScreen(screen) {
-  [homeSection, guideSection, quizSection, document.getElementById("adminSection")].forEach(s => s.style.display="none");
-  screen.style.display = "flex";
-}
+        <!-- 문제 세트 정보 -->
+        <div class="mb-6 space-y-4 max-w-2xl mx-auto">
+            <input type="hidden" id="edit-set-id">
+            <div>
+                <label for="set-title-input" class="block text-lg font-medium mb-2">문제 제목 (필수)</label>
+                <input type="text" id="set-title-input" placeholder="예: 2025년 1회 영단어" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label for="set-description-input" class="block text-lg font-medium mb-2">문제 설명 (선택)</label>
+                <textarea id="set-description-input" rows="3" placeholder="예: 1과부터 3과까지의 중요 단어" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+        </div>
 
-// 🔹 퀴즈 불러오기
-async function loadQuiz() {
-  const snapshot = await getDocs(collection(db, "quizzes"));
-  quizList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-  // 랜덤 섞기
-  quizList = quizList.sort(() => Math.random() - 0.5);
-}
+        <!-- 문제/정답 목록 -->
+        <div class="max-w-2xl mx-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold">문제/정답 목록</h2>
+                <button id="add-qa-pair-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
+                    + 문제 추가하기
+                </button>
+            </div>
+            <div id="qa-list-container" class="space-y-4">
+                <!-- JS로 Q&A 쌍 렌더링 -->
+            </div>
+        </div>
+    </div>
 
-// 🔹 다음으로 진행 (실제 이동)
-function proceedNext() {
-  // awaitingNext 상태 사라짐 handled by showQuiz
-  currentIndex++;
-  showQuiz();
-}
+    <!-- 5. 문제 풀이 화면 -->
+    <div id="quiz-screen" class="screen p-6 md:p-10 justify-between">
+        <!-- 상단: 중단 버튼 및 진행도 -->
+        <header class="flex justify-between items-center">
+            <button id="pause-btn" class="text-2xl w-10 h-10 flex items-center justify-center bg-gray-700 rounded-full hover:bg-gray-600">
+                ||
+            </button>
+            <div id="quiz-progress" class="text-lg font-medium">1 / 10</div>
+        </header>
+        
+        <!-- 문제 -->
+        <div class="flex-1 flex flex-col justify-center items-center text-center px-4">
+            <div id="question-text" class="text-4xl md:text-6xl font-bold mb-12 p-6 bg-gray-800 rounded-2xl min-h-[150px] flex items-center justify-center w-full max-w-3xl">
+                Question
+            </div>
 
-// 🔹 퀴즈 표시 (한 문제)
-function showQuiz() {
-  if (quizList.length === 0) {
-    document.getElementById("quizBox").innerHTML = "<p>등록된 문제가 없습니다. 관리자에서 문제를 추가하세요.</p>";
-    return;
-  }
+            <!-- 답안 입력 -->
+            <input type="text" id="answer-input" placeholder="정답을 입력하세요" class="w-full max-w-xl p-4 text-2xl rounded-lg bg-gray-700 border border-gray-600 text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
 
-  if (currentIndex >= quizList.length) {
-    if (wrongList.length > 0) {
-      quizList = [...wrongList];
-      wrongList = [];
-      currentIndex = 0;
-      // 섞어서 재도전하고 싶으면 아래 줄 유지; 아니면 주석 처리
-      quizList = quizList.sort(() => Math.random() - 0.5);
-      showQuiz();
-      return;
-    } else {
-      document.getElementById("quizBox").innerHTML = `
-        <h2>모든 문제를 맞췄어요!</h2>
-        <button id="goHome">홈으로 돌아가기</button>
-      `;
-      document.getElementById("goHome").onclick = () => showScreen(homeSection);
-      return;
-    }
-  }
+            <!-- 피드백 -->
+            <div id="feedback-message" class="mt-6 text-2xl font-semibold h-10"></div>
+            
+            <!-- 다음 버튼 (틀렸을 때) -->
+            <button id="next-question-btn" class="hidden mt-4 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg">
+                다음 →
+            </button>
+        </div>
 
-  const quiz = quizList[currentIndex];
-  const question = reverseMode ? quiz.answer : quiz.question;
-  const answer = reverseMode ? quiz.question : quiz.answer;
+        <!-- 하단 (빈 공간) -->
+        <div></div>
+    </div>
 
-  // 렌더링: 입력란에 autocomplete 끄기
-  document.getElementById("quizBox").innerHTML = `
-    <h3>${question}</h3>
-    <input type="text" id="answerInput" placeholder="정답을 입력하세요." autocomplete="off" />
-    <button id="submitAnswer">정답 확인</button>
-    <div id="result"></div>
-    <button id="nextBtn" style="display:none;">다음 문제</button>
-  `;
+    <!-- 중단 모달 -->
+    <div id="pause-modal" class="screen fixed inset-0 bg-black bg-opacity-80 flex-col justify-center items-center z-40">
+        <h2 class="text-4xl font-bold mb-8">중단</h2>
+        <div class="space-y-4">
+            <button id="continue-quiz-btn" class="w-64 bg-green-600 hover:bg-green-700 text-white text-xl font-bold py-4 px-6 rounded-lg">
+                이어 풀기
+            </button>
+            <button id="quit-quiz-btn" class="w-64 bg-red-600 hover:bg-red-700 text-white text-xl font-bold py-4 px-6 rounded-lg">
+                그만 풀기
+            </button>
+        </div>
+    </div>
 
-  const input = document.getElementById("answerInput");
-  const submitBtn = document.getElementById("submitAnswer");
-  const resultDiv = document.getElementById("result");
-  const nextBtn = document.getElementById("nextBtn");
+    <!-- 오답 재풀이 알림 -->
+    <div id="retake-modal" class="screen fixed inset-0 bg-black bg-opacity-80 flex-col justify-center items-center z-40">
+        <h2 class="text-4xl font-bold">틀린 문제 다시 풀기</h2>
+    </div>
 
-  // 자동 포커스
-  input.focus();
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase (제공된 내용 대신 캔버스 환경 변수 사용)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            addDoc, 
+            setDoc, 
+            updateDoc, 
+            deleteDoc, 
+            onSnapshot, 
+            collection, 
+            query, 
+            where, 
+            getDocs, 
+            serverTimestamp,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-  // 상태: 제출(정답확인) 후 다음을 기다리는지 여부
-  let awaitingNext = false;
+        // Firebase 설정 (캔버스 환경 변수)
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-flashcard-app';
+        
+        let app, db, auth, userId;
+        let problemSetsCache = []; // 전체 문제 세트 캐시
+        let publicProblemSets = []; // 공개 문제 세트 캐시
+        let selectedSetId = null;
+        let isReverseMode = false;
+        let mainListUnsubscribe = null; // 메인 리스트 리스너
+        let adminListUnsubscribe = null; // 관리자 리스트 리스너
 
-  // 정답 확인 (한 번 누르면 **결과만** 보여주고 진행은 하지 않음)
-  const checkAnswer = () => {
-    if (awaitingNext) return; // 이미 확인된 상태면 무시
-    const userAnswer = input.value.trim();
-    if (userAnswer === answer.trim()) {
-      resultDiv.innerHTML = `<p class="correct">정답입니다!</p>`;
-    } else {
-      resultDiv.innerHTML = `<p class="wrong">❌ 정답은 ${answer}입니다.</p>`;
-      wrongList.push(quiz);
-    }
-    // 이제 다음으로 넘어가기 대기 상태로 전환
-    awaitingNext = true;
-    nextBtn.style.display = "inline-block";
-    // 선택적으로 입력란을 읽기전용으로 만들어 실수입력 방지 (원하면 주석처리)
-    input.setAttribute("readonly", "true");
-    // focus를 nextBtn으로 이동하면 시각적으로도 알기 쉬움
-    nextBtn.focus();
-  };
+        // 퀴즈 상태
+        let currentQuiz = {
+            questions: [],
+            currentIndex: 0,
+            incorrectAnswers: [],
+            isRetakeRound: false
+        };
 
-  // 다음 문제로 실제 진행
-  const handleNext = () => {
-    if (!awaitingNext) return; // 확인을 먼저 해야 함
-    // cleanup & 진행
-    awaitingNext = false;
-    // remove readonly to allow typing on next render
-    input.removeAttribute("readonly");
-    proceedNext();
-  };
+        // DOM 요소
+        const screens = {};
+        const dom = {
+            loadingOverlay: document.getElementById('loading-overlay'),
+            animatedBg: document.getElementById('animated-bg'),
+            // 메인
+            mainScreen: document.getElementById('main-screen'),
+            adminPanelBtn: document.getElementById('main-admin-btn'),
+            reverseToggle: document.getElementById('reverse-mode-toggle'),
+            searchBar: document.getElementById('search-bar'),
+            problemListContainer: document.getElementById('problem-list-container'),
+            noPublicSets: document.getElementById('no-public-sets'),
+            startQuizBtn: document.getElementById('start-quiz-btn'),
+            // 관리자 로그인
+            adminLoginScreen: document.getElementById('admin-login-screen'),
+            passwordInput: document.getElementById('admin-password-input'),
+            loginBtn: document.getElementById('admin-login-btn'),
+            loginError: document.getElementById('login-error'),
+            adminLoginBackBtn: document.getElementById('admin-login-back-btn'),
+            // 관리자 패널
+            adminPanelScreen: document.getElementById('admin-panel-screen'),
+            adminPanelBackBtn: document.getElementById('admin-panel-back-btn'),
+            adminAddSetBtn: document.getElementById('admin-add-set-btn'),
+            adminProblemList: document.getElementById('admin-problem-list'),
+            // 관리자 수정
+            adminEditScreen: document.getElementById('admin-edit-screen'),
+            adminEditBackBtn: document.getElementById('admin-edit-back-btn'),
+            editScreenTitle: document.getElementById('edit-screen-title'),
+            saveSetBtn: document.getElementById('save-set-btn'),
+            editSetId: document.getElementById('edit-set-id'),
+            setTitleInput: document.getElementById('set-title-input'),
+            setDescriptionInput: document.getElementById('set-description-input'),
+            addQaPairBtn: document.getElementById('add-qa-pair-btn'),
+            qaListContainer: document.getElementById('qa-list-container'),
+            // 퀴즈
+            quizScreen: document.getElementById('quiz-screen'),
+            pauseBtn: document.getElementById('pause-btn'),
+            quizProgress: document.getElementById('quiz-progress'),
+            questionText: document.getElementById('question-text'),
+            answerInput: document.getElementById('answer-input'),
+            feedbackMessage: document.getElementById('feedback-message'),
+            nextQuestionBtn: document.getElementById('next-question-btn'),
+            // 모달
+            pauseModal: document.getElementById('pause-modal'),
+            continueQuizBtn: document.getElementById('continue-quiz-btn'),
+            quitQuizBtn: document.getElementById('quit-quiz-btn'),
+            retakeModal: document.getElementById('retake-modal'),
+        };
 
-  // 버튼/키 이벤트 연결
-  submitBtn.onclick = checkAnswer;
-  nextBtn.onclick = handleNext;
+        // --- 유틸리티 함수 ---
 
-  // Enter 키 동작: 1st Enter -> checkAnswer, 2nd Enter -> handleNext
-  input.addEventListener("keydown", function onKey(e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (!awaitingNext) {
-        checkAnswer();
-      } else {
-        handleNext();
-      }
-    }
-  });
-}
+        function showLoading(show) {
+            dom.loadingOverlay.style.display = show ? 'flex' : 'none';
+        }
 
-// 🔹 홈 화면 버튼 이벤트
-startBtn.onclick = () => showScreen(guideSection);
+        // 화면 전환
+        function showScreen(screenId) {
+            Object.values(screens).forEach(screen => screen.classList.remove('active'));
+            if (screens[screenId]) {
+                screens[screenId].classList.add('active');
+            }
+            
+            // 퀴즈 화면이 아닐 때는 배경 보이기
+            if (screenId !== 'quizScreen') {
+                dom.animatedBg.style.display = 'block';
+            }
+        }
 
-document.getElementById("guideConfirm").onclick = async () => {
-  guideSection.style.display="none";
-  quizSection.style.display="flex";
-  modeDisplay.textContent = reverseMode ? "모드: 거꾸로 모드" : "모드: 일반 모드";
-  currentIndex = 0;
-  wrongList = [];
-  await loadQuiz();
-  showQuiz();
-};
+        // 날짜 포맷 (예: 2025. 11. 1.)
+        function formatDate(timestamp) {
+            if (!timestamp || !timestamp.toDate) return '날짜 정보 없음';
+            return timestamp.toDate().toLocaleDateString('ko-KR');
+        }
 
-// 🔹 홈 화면 거꾸로 문제풀기 버튼 (토글)
-const reverseModeBtn = document.createElement("button");
-reverseModeBtn.textContent = "거꾸로 문제풀기";
-reverseModeBtn.style.marginBottom = "10px";
-reverseModeBtn.onclick = () => {
-  reverseMode = !reverseMode;
-  reverseModeBtn.textContent = reverseMode ? "문제풀기" : "거꾸로 문제풀기";
-  // modeDisplay가 보이는 상태라면 바로 갱신
-  modeDisplay.textContent = reverseMode ? "모드: 거꾸로 모드" : "모드: 일반 모드";
-};
-homeSection.insertBefore(reverseModeBtn, startBtn);
+        // --- 초기화 ---
 
-// 🔹 관리자 패널
-adminBtn.onclick = async () => {
-  const inputCode = prompt("관리자 코드를 입력하세요:");
-  if (parseInt(inputCode) === 251414) {
-    showScreen(document.getElementById("adminSection"));
-    loadAdminPanel();
-  } else alert("잘못된 코드입니다.");
-};
+        async function initialize() {
+            // DOM 스크린 객체화
+            screens.mainScreen = dom.mainScreen;
+            screens.adminLoginScreen = dom.adminLoginScreen;
+            screens.adminPanelScreen = dom.adminPanelScreen;
+            screens.adminEditScreen = dom.adminEditScreen;
+            screens.quizScreen = dom.quizScreen;
+            screens.pauseModal = dom.pauseModal;
+            screens.retakeModal = dom.retakeModal;
 
-async function loadAdminPanel() {
-  const snapshot = await getDocs(collection(db, "quizzes"));
-  const adminList = document.getElementById("adminList");
-  adminList.innerHTML = "";
-  snapshot.forEach(docSnap => {
-    const quiz = docSnap.data();
-    const div = document.createElement("div");
-    div.className = "admin-item";
-    div.innerHTML = `
-      <p><b>문제:</b> ${quiz.question}</p>
-      <p><b>정답:</b> ${quiz.answer}</p>
-      <button class="editBtn">수정</button>
-      <button class="deleteBtn">삭제</button>
-    `;
-    adminList.appendChild(div);
+            showLoading(true);
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setLogLevel('Debug'); // Firebase 로그 활성화
 
-    div.querySelector(".editBtn").onclick = async () => {
-      const newQ = prompt("새 문제를 입력하세요:", quiz.question);
-      const newA = prompt("새 정답을 입력하세요:", quiz.answer);
-      if(newQ && newA) await updateDoc(doc(db,"quizzes",docSnap.id),{question:newQ, answer:newA});
-      loadAdminPanel();
-    };
-    div.querySelector(".deleteBtn").onclick = async () => { 
-      if (confirm("정말 삭제하시겠습니까?")) {
-        await deleteDoc(doc(db,"quizzes",docSnap.id)); 
-        loadAdminPanel();
-      }
-    };
-  });
-}
+                // 익명 로그인 또는 커스텀 토큰 로그인
+                await new Promise((resolve, reject) => {
+                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                        unsubscribe(); // 리스너 해제
+                        if (user) {
+                            userId = user.uid;
+                            console.log("User already signed in:", userId);
+                            resolve();
+                        } else if (typeof __initial_auth_token !== 'undefined') {
+                            try {
+                                const userCredential = await signInWithCustomToken(auth, __initial_auth_token);
+                                userId = userCredential.user.uid;
+                                console.log("Signed in with custom token:", userId);
+                                resolve();
+                            } catch (error) {
+                                console.error("Custom token sign-in error:", error);
+                                reject(error);
+                            }
+                        } else {
+                            try {
+                                const userCredential = await signInAnonymously(auth);
+                                userId = userCredential.user.uid;
+                                console.log("Signed in anonymously:", userId);
+                                resolve();
+                            } catch (error) {
+                                console.error("Anonymous sign-in error:", error);
+                                reject(error);
+                            }
+                        }
+                    });
+                });
 
-document.getElementById("addQuizBtn").onclick = async () => {
-  const q = prompt("문제를 입력하세요:");
-  const a = prompt("정답을 입력하세요:");
-  if(q && a) await addDoc(collection(db,"quizzes"), {question:q, answer:a});
-  loadAdminPanel();
-};
+                // 메인 화면 데이터 로드
+                loadMainProblemSets();
+                
+                // 이벤트 리스너 바인딩
+                bindEventListeners();
+                
+                showScreen('mainScreen');
+            } catch (error) {
+                console.error("Firebase 초기화 실패:", error);
+                alert("앱을 초기화하는 데 실패했습니다. 인터넷 연결을 확인하세요.");
+            } finally {
+                showLoading(false);
+            }
+        }
 
-document.querySelectorAll(".backHomeBtn").forEach(btn => btn.onclick = () => showScreen(homeSection));
+        // --- 데이터 로드 (Firebase) ---
 
-</script>
+        // 메인 화면용 (공개된 세트만)
+        function loadMainProblemSets() {
+            if (mainListUnsubscribe) mainListUnsubscribe(); // 이전 리스너 해제
+
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'flashcard-sets'), where("isPublic", "==", true));
+            mainListUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                publicProblemSets = [];
+                querySnapshot.forEach((doc) => {
+                    publicProblemSets.push({ id: doc.id, ...doc.data() });
+                });
+                renderMainProblemList(publicProblemSets);
+            }, (error) => {
+                console.error("공개 문제 세트 로드 실패:", error);
+            });
+        }
+
+        // 관리자용 (모든 세트)
+        function loadAdminProblemSets() {
+            if (adminListUnsubscribe) adminListUnsubscribe(); // 이전 리스너 해제
+
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'flashcard-sets'));
+            adminListUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                problemSetsCache = [];
+                querySnapshot.forEach((doc) => {
+                    problemSetsCache.push({ id: doc.id, ...doc.data() });
+                });
+                renderAdminProblemList(problemSetsCache);
+            }, (error) => {
+                console.error("전체 문제 세트 로드 실패:", error);
+            });
+        }
+
+        // --- 렌더링 함수 ---
+
+        // 메인 화면 문제 리스트 렌더링
+        function renderMainProblemList(sets) {
+            dom.problemListContainer.innerHTML = '';
+            const query = dom.searchBar.value.toLowerCase();
+            const filteredSets = sets.filter(set => 
+                set.title.toLowerCase().includes(query) || 
+                set.description.toLowerCase().includes(query)
+            );
+
+            if (filteredSets.length === 0) {
+                dom.noPublicSets.style.display = 'block';
+                return;
+            }
+
+            dom.noPublicSets.style.display = 'none';
+
+            filteredSets.forEach(set => {
+                const isSelected = set.id === selectedSetId;
+                const setEl = document.createElement('div');
+                setEl.className = `set-item p-4 border-2 border-gray-700 rounded-lg cursor-pointer transition-all bg-gray-800 bg-opacity-70 hover:bg-gray-700 ${isSelected ? 'selected' : ''}`;
+                setEl.dataset.id = set.id;
+
+                setEl.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="text-xl font-bold">${set.title}</h3>
+                            <p class="text-gray-300 mt-1">${set.description || '설명 없음'}</p>
+                            <p class="text-sm text-gray-400 mt-2">최종 수정: ${formatDate(set.lastModified)}</p>
+                        </div>
+                        ${isSelected ? '<span class="selected-text text-sm font-bold bg-yellow-300 text-yellow-900 px-2 py-1 rounded">선택됨</span>' : ''}
+                    </div>
+                `;
+                
+                // 선택 이벤트
+                setEl.addEventListener('click', () => handleSelectSet(set.id, set.title));
+                dom.problemListContainer.appendChild(setEl);
+            });
+        }
+
+        // 관리자 화면 문제 리스트 렌더링
+        function renderAdminProblemList(sets) {
+            dom.adminProblemList.innerHTML = '';
+            if (sets.length === 0) {
+                dom.adminProblemList.innerHTML = '<p class="text-gray-400 text-center">문제 세트가 없습니다. 새로 추가해보세요.</p>';
+                return;
+            }
+
+            // 정렬 (최신순)
+            const sortedSets = sets.sort((a, b) => (b.lastModified?.toDate() || 0) - (a.lastModified?.toDate() || 0));
+
+            sortedSets.forEach(set => {
+                const setEl = document.createElement('div');
+                setEl.className = 'p-4 border border-gray-700 rounded-lg bg-gray-800 flex justify-between items-center';
+                
+                setEl.innerHTML = `
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold ${set.isPublic ? 'text-green-400' : 'text-gray-400'}">${set.title} ${set.isPublic ? '(공개됨)' : '(비공개)'}</h3>
+                        <p class="text-gray-300">${set.description || '설명 없음'}</p>
+                        <p class="text-sm text-gray-500">수정: ${formatDate(set.lastModified)}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <!-- 공개/비공개 토글 -->
+                        <label class="switch" title="${set.isPublic ? '비공개로' : '공개로'}">
+                            <input type="checkbox" class="toggle-public" data-id="${set.id}" ${set.isPublic ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                        <button class="edit-set-btn bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg" data-id="${set.id}" title="수정">✏️</button>
+                        <button class="delete-set-btn bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg" data-id="${set.id}" title="삭제">🗑️</button>
+                    </div>
+                `;
+                dom.adminProblemList.appendChild(setEl);
+            });
+
+            // 동적으로 생성된 버튼에 이벤트 바인딩
+            bindAdminListButtons();
+        }
+
+        // Q&A 목록 렌더링 (관리자 수정)
+        function renderQAPair(question = '', answer = '') {
+            const pairEl = document.createElement('div');
+            pairEl.className = 'qa-pair p-4 bg-gray-800 rounded-lg space-y-2 relative';
+            
+            pairEl.innerHTML = `
+                <button class="delete-qa-btn absolute -top-2 -right-2 bg-red-700 w-6 h-6 rounded-full text-white text-xs font-bold">X</button>
+                <input type="text" class="qa-question w-full p-2 rounded bg-gray-700 border border-gray-600 text-white" value="${escapeHtml(question)}" placeholder="문제">
+                <input type="text" class="qa-answer w-full p-2 rounded bg-gray-700 border border-gray-600 text-white" value="${escapeHtml(answer)}" placeholder="정답">
+            `;
+
+            pairEl.querySelector('.delete-qa-btn').addEventListener('click', () => {
+                pairEl.remove();
+            });
+
+            dom.qaListContainer.appendChild(pairEl);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/"/g, '&quot;');
+        }
+
+        // --- 이벤트 핸들러 ---
+
+        function bindEventListeners() {
+            // 메인
+            dom.adminPanelBtn.addEventListener('click', () => {
+                dom.passwordInput.value = '';
+                dom.loginError.classList.add('hidden');
+                showScreen('adminLoginScreen');
+            });
+            dom.reverseToggle.addEventListener('change', handleReverseToggle);
+            dom.searchBar.addEventListener('input', () => renderMainProblemList(publicProblemSets));
+            dom.startQuizBtn.addEventListener('click', handleStartQuiz);
+
+            // 관리자 로그인
+            dom.loginBtn.addEventListener('click', handleAdminLogin);
+            dom.adminLoginBackBtn.addEventListener('click', () => showScreen('mainScreen'));
+            dom.passwordInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleAdminLogin();
+            });
+
+            // 관리자 패널
+            dom.adminPanelBackBtn.addEventListener('click', () => {
+                if(adminListUnsubscribe) adminListUnsubscribe(); // 리스너 해제
+                showScreen('mainScreen');
+            });
+            dom.adminAddSetBtn.addEventListener('click', () => handleShowEditScreen());
+
+            // 관리자 수정
+            dom.adminEditBackBtn.addEventListener('click', () => showScreen('adminPanelScreen'));
+            dom.addQaPairBtn.addEventListener('click', () => renderQAPair());
+            dom.saveSetBtn.addEventListener('click', handleSaveSet);
+
+            // 퀴즈
+            dom.pauseBtn.addEventListener('click', () => showScreen('pauseModal'));
+            dom.continueQuizBtn.addEventListener('click', () => showScreen('quizScreen'));
+            dom.quitQuizBtn.addEventListener('click', () => {
+                showScreen('mainScreen');
+                // 퀴즈 상태 리셋 (필요시)
+            });
+            dom.nextQuestionBtn.addEventListener('click', nextQuestion);
+            dom.answerInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    // 피드백이 보이는 상태(틀린 상태)면 다음으로, 아니면 정답 확인
+                    if (dom.feedbackMessage.textContent && !dom.nextQuestionBtn.classList.contains('hidden')) {
+                        nextQuestion();
+                    } else if (!dom.feedbackMessage.textContent) {
+                        checkAnswer();
+                    }
+                }
+            });
+        }
+        
+        function bindAdminListButtons() {
+            // 수정
+            document.querySelectorAll('.edit-set-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    handleShowEditScreen(e.currentTarget.dataset.id);
+                });
+            });
+            // 삭제
+            document.querySelectorAll('.delete-set-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    handleDeleteSet(e.currentTarget.dataset.id);
+                });
+            });
+            // 공개 토글
+            document.querySelectorAll('.toggle-public').forEach(toggle => {
+                toggle.addEventListener('change', (e) => {
+                    handleTogglePublic(e.currentTarget.dataset.id, e.currentTarget.checked);
+                });
+            });
+        }
+
+        // 메인: 거꾸로 모드
+        function handleReverseToggle(e) {
+            isReverseMode = e.target.checked;
+            dom.animatedBg.classList.toggle('reverse-active', isReverseMode);
+        }
+
+        // 메인: 문제 세트 선택
+        function handleSelectSet(setId, setTitle) {
+            selectedSetId = setId;
+            // UI 업데이트
+            renderMainProblemList(publicProblemSets);
+            // 버튼 활성화 및 텍스트 변경
+            dom.startQuizBtn.disabled = false;
+            dom.startQuizBtn.textContent = `'${setTitle}' 세트 풀이 시작하기`;
+        }
+
+        // 메인: 퀴즈 시작
+        function handleStartQuiz() {
+            if (!selectedSetId) return;
+
+            // 전체 캐시에서 선택된 세트 찾기 (공개/비공개 상관없이 시작 가능해야 함)
+            // 아님, 메인에서는 공개된 것만 시작 가능.
+            const set = publicProblemSets.find(s => s.id === selectedSetId);
+            if (!set || !set.questions || set.questions.length === 0) {
+                alert("문제가 없는 세트입니다.");
+                return;
+            }
+
+            startQuiz(set.questions);
+        }
+
+        // 관리자: 로그인
+        function handleAdminLogin() {
+            if (dom.passwordInput.value === '251414') {
+                dom.loginError.classList.add('hidden');
+                loadAdminProblemSets(); // 관리자 패널 데이터 로드
+                showScreen('adminPanelScreen');
+            } else {
+                dom.loginError.classList.remove('hidden');
+            }
+        }
+
+        // 관리자: 수정/추가 화면 보이기
+        function handleShowEditScreen(setId = null) {
+            // 폼 리셋
+            dom.editSetId.value = setId || '';
+            dom.setTitleInput.value = '';
+            dom.setDescriptionInput.value = '';
+            dom.qaListContainer.innerHTML = '';
+
+            if (setId) {
+                // 수정 모드
+                dom.editScreenTitle.textContent = '문제 세트 수정';
+                const set = problemSetsCache.find(s => s.id === setId);
+                if (set) {
+                    dom.setTitleInput.value = set.title;
+                    dom.setDescriptionInput.value = set.description || '';
+                    if (set.questions) {
+                        set.questions.forEach(qa => renderQAPair(qa.q, qa.a));
+                    }
+                }
+            } else {
+                // 추가 모드
+                dom.editScreenTitle.textContent = '문제 세트 만들기';
+                renderQAPair(); // 기본 1개 추가
+            }
+            showScreen('adminEditScreen');
+        }
+
+        // 관리자: 저장
+        async function handleSaveSet() {
+            const title = dom.setTitleInput.value.trim();
+            if (!title) {
+                alert("문제 제목은 필수입니다.");
+                return;
+            }
+
+            const description = dom.setDescriptionInput.value.trim();
+            const setId = dom.editSetId.value;
+
+            // Q&A 목록 수집
+            const questions = [];
+            const qaPairs = document.querySelectorAll('.qa-pair');
+            qaPairs.forEach(pair => {
+                const q = pair.querySelector('.qa-question').value.trim();
+                const a = pair.querySelector('.qa-answer').value.trim();
+                if (q && a) {
+                    questions.push({ q, a });
+                }
+            });
+
+            if (questions.length === 0) {
+                alert("하나 이상의 문제와 정답을 입력해야 합니다.");
+                return;
+            }
+
+            const setData = {
+                title,
+                description,
+                questions,
+                lastModified: serverTimestamp() // 서버 시간
+            };
+
+            showLoading(true);
+            try {
+                if (setId) {
+                    // 수정
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'flashcard-sets', setId);
+                    await updateDoc(docRef, setData);
+                } else {
+                    // 새로 추가 (기본 비공개)
+                    setData.isPublic = false;
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'flashcard-sets'), setData);
+                }
+                showLoading(false);
+                showScreen('adminPanelScreen');
+            } catch (error) {
+                showLoading(false);
+                console.error("저장 실패:", error);
+                alert("저장에 실패했습니다.");
+            }
+        }
+
+        // 관리자: 삭제
+        async function handleDeleteSet(setId) {
+            // (요청사항: 확인 창 금지)
+            showLoading(true);
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'flashcard-sets', setId);
+                await deleteDoc(docRef);
+            } catch (error) {
+                console.error("삭제 실패:", error);
+                alert("삭제에 실패했습니다.");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 관리자: 공개/비공개
+        async function handleTogglePublic(setId, isPublic) {
+            showLoading(true);
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'flashcard-sets', setId);
+                await updateDoc(docRef, { isPublic });
+            } catch (error) {
+                console.error("공개 상태 변경 실패:", error);
+                alert("공개 상태 변경에 실패했습니다.");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // --- 퀴즈 로직 ---
+        
+        // 피셔-예이츠 셔플
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function startQuiz(questions) {
+            let preparedQuestions = questions.map(qa => ({...qa})); // 깊은 복사
+
+            // 거꾸로 모드 적용
+            if (isReverseMode) {
+                preparedQuestions = preparedQuestions.map(qa => ({ q: qa.a, a: qa.q }));
+            }
+            
+            currentQuiz = {
+                questions: shuffle(preparedQuestions),
+                currentIndex: 0,
+                incorrectAnswers: [],
+                isRetakeRound: false
+            };
+
+            showScreen('quizScreen');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuiz.currentIndex >= currentQuiz.questions.length) {
+                // 한 라운드 종료
+                endOfRound();
+                return;
+            }
+
+            const q = currentQuiz.questions[currentQuiz.currentIndex];
+            dom.questionText.textContent = q.q;
+            dom.answerInput.value = '';
+            dom.answerInput.disabled = false;
+            dom.feedbackMessage.textContent = '';
+            dom.feedbackMessage.className = 'mt-6 text-2xl font-semibold h-10';
+            dom.nextQuestionBtn.classList.add('hidden');
+            
+            dom.quizProgress.textContent = `${currentQuiz.currentIndex + 1} / ${currentQuiz.questions.length}`;
+
+            // 오토 포커스
+            setTimeout(() => dom.answerInput.focus(), 100);
+        }
+
+        function checkAnswer() {
+            const userAnswer = dom.answerInput.value; // 띄어쓰기 유지 (trim() 제거)
+            const correctAnswer = currentQuiz.questions[currentQuiz.currentIndex].a;
+
+            dom.answerInput.disabled = true;
+            
+            // 6. 대소문자, 띄어쓰기 구분 (완전 일치)
+            if (userAnswer === correctAnswer) {
+                // 정답
+                dom.feedbackMessage.textContent = '정답입니다.';
+                dom.feedbackMessage.classList.add('text-green-400');
+                
+                // 6. 적당한 시간 뒤 자동 다음 문제
+                setTimeout(nextQuestion, 1500);
+
+            } else {
+                // 오답
+                dom.feedbackMessage.textContent = `틀렸습니다. 정답은: ${correctAnswer}`;
+                dom.feedbackMessage.classList.add('text-red-400');
+                dom.nextQuestionBtn.classList.remove('hidden');
+
+                // 6. 오답 문제 기록
+                currentQuiz.incorrectAnswers.push(currentQuiz.questions[currentQuiz.currentIndex]);
+            }
+        }
+
+        function nextQuestion() {
+            currentQuiz.currentIndex++;
+            loadQuestion();
+        }
+
+        function endOfRound() {
+            if (currentQuiz.incorrectAnswers.length > 0) {
+                // 6-1. 오답 문제 재풀이
+                showScreen('retakeModal');
+
+                setTimeout(() => {
+                    currentQuiz = {
+                        questions: shuffle(currentQuiz.incorrectAnswers), // 오답 목록으로 재설정
+                        currentIndex: 0,
+                        incorrectAnswers: [], // 오답 목록 초기화
+                        isRetakeRound: true
+                    };
+                    showScreen('quizScreen');
+                    loadQuestion();
+                }, 2000); // 2초간 메시지 표시
+
+            } else {
+                // 모든 문제를 맞힘 (또는 오답 재풀이 종료)
+                alert(currentQuiz.isRetakeRound ? "오답 정복 완료! 메인으로 돌아갑니다." : "완벽합니다! 모든 문제를 맞혔습니다.");
+                showScreen('mainScreen');
+            }
+        }
+
+        // --- 앱 시작 ---
+        document.addEventListener('DOMContentLoaded', initialize);
+
+    </script>
 </body>
 </html>
+
