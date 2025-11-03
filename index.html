@@ -359,16 +359,16 @@
             <div id="quiz-progress" class="text-lg font-medium">1 / 10</div>
         </header>
         
-        <!-- 문제 --><div class="flex-1 flex flex-col justify-center items-center text-center px-4">
+        <!-- 문제 (HTML 구조 복구) --><div class="flex-1 flex flex-col justify-center items-center text-center px-4">
             <div id="question-text" class="text-4xl md:text-6xl font-bold mb-12 p-6 bg-gray-800 rounded-2xl min-h-[150px] flex items-center justify-center w-full max-w-3xl">
                 Question
             </div>
 
-            <!-- 답안 입력 --><input type="text" id="answer-input" placeholder="정답을 입력하세요" class="w-full max-w-xl p-4 text-2xl rounded-lg bg-gray-700 border border-gray-600 text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <!-- 답안 입력 (HTML 구조 복구) --><input type="text" id="answer-input" placeholder="정답을 입력하세요" class="w-full max-w-xl p-4 text-2xl rounded-lg bg-gray-700 border border-gray-600 text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-500" autocomplete="off">
 
-            <!-- 피드백 --><div id="feedback-message" class="mt-6 text-2xl font-semibold h-10"></div>
+            <!-- 피드백 (HTML 구조 복구) --><div id="feedback-message" class="mt-6 text-2xl font-semibold h-10"></div>
             
-            <!-- 다음 버튼 (틀렸을 때) --><button id="next-question-btn" class="hidden mt-4 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg">
+            <!-- 다음 버튼 (HTML 구조 복구) --><button id="next-question-btn" class="hidden mt-4 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg">
                 다음 →
             </button>
         </div>
@@ -473,59 +473,9 @@
             isRetakeRound: false
         };
 
-        // DOM 요소
+        // ⭐️ FIX: dom 객체를 전역(let)으로 선언만 함
         const screens = {};
-        const dom = {
-            loadingOverlay: document.getElementById('loading-overlay'),
-            animatedBg: document.getElementById('animated-bg'),
-            // 메인
-            mainScreen: document.getElementById('main-screen'),
-            mainTitle: document.getElementById('main-title'), // H1 (Flash Card)
-            adminPanelBtn: document.getElementById('main-admin-btn'),
-            reverseToggle: document.getElementById('reverse-mode-toggle'),
-            searchBar: document.getElementById('search-bar'),
-            problemListHeader: document.getElementById('problem-list-header'), // H2 (문제 리스트)
-            problemListContainer: document.getElementById('problem-list-container'),
-            noPublicSets: document.getElementById('no-public-sets'),
-            startQuizBtn: document.getElementById('start-quiz-btn'),
-            // 관리자 로그인
-            adminLoginScreen: document.getElementById('admin-login-screen'),
-            passwordInput: document.getElementById('admin-password-input'),
-            loginBtn: document.getElementById('admin-login-btn'),
-            loginError: document.getElementById('login-error'),
-            adminLoginBackBtn: document.getElementById('admin-login-back-btn'),
-            // 관리자 패널
-            adminPanelScreen: document.getElementById('admin-panel-screen'),
-            adminPanelBackBtn: document.getElementById('admin-panel-back-btn'),
-            adminAddSetBtn: document.getElementById('admin-add-set-btn'),
-            adminProblemList: document.getElementById('admin-problem-list'),
-            // 관리자 수정
-            adminEditScreen: document.getElementById('admin-edit-screen'),
-            adminEditBackBtn: document.getElementById('admin-edit-back-btn'),
-            editScreenTitle: document.getElementById('edit-screen-title'),
-            saveSetBtn: document.getElementById('save-set-btn'),
-            editSetId: document.getElementById('edit-set-id'),
-            setTitleInput: document.getElementById('set-title-input'),
-            setDescriptionInput: document.getElementById('set-description-input'),
-            addQaPairBtn: document.getElementById('add-qa-pair-btn'),
-            qaListContainer: document.getElementById('qa-list-container'),
-            // 퀴즈
-            quizScreen: document.getElementById('quiz-screen'),
-            pauseBtn: document.getElementById('pause-btn'),
-            quizProgress: document.getElementById('quiz-progress'),
-            questionText: document.getElementById('question-text'),
-            answerInput: document.getElementById('answer-input'),
-            feedbackMessage: document.getElementById('feedback-message'),
-            nextQuestionBtn: document.getElementById('next-question-btn'),
-            // 모달
-            pauseModal: document.getElementById('pause-modal'),
-            continueQuizBtn: document.getElementById('continue-quiz-btn'),
-            quitQuizBtn: document.getElementById('quit-quiz-btn'),
-            retakeModal: document.getElementById('retake-modal'),
-            alertModal: document.getElementById('alert-modal'),
-            alertMessage: document.getElementById('alert-message'),
-            alertOkBtn: document.getElementById('alert-ok-btn'),
-        };
+        let dom;
 
         // --- 유틸리티 함수 ---
 
@@ -545,13 +495,17 @@
             if (screenId !== 'alertModal' && screenId !== 'pauseModal' && screenId !== 'retakeModal') {
                 lastActiveScreen = screenId;
             }
-            Object.values(screens).forEach(screen => screen.classList.remove('active'));
+            Object.values(screens).forEach(screen => {
+                // ⭐️ FIX: screen이 null일 경우를 대비 (DOM 초기화 전/실패)
+                if (screen) screen.classList.remove('active');
+            });
             if (screens[screenId]) {
                 screens[screenId].classList.add('active');
             }
             
             // 퀴즈 화면이 아닐 때는 배경 보이기
-            if (screenId !== 'quizScreen') {
+            // ⭐️ FIX: dom이 초기화된 후에만 .style 접근
+            if (dom && dom.animatedBg && screenId !== 'quizScreen') {
                 dom.animatedBg.style.display = 'block';
             }
         }
@@ -564,13 +518,16 @@
 
         // 배경 단어 생성
         function generateBackgroundWords() {
+            // ⭐️ FIX: dom이 아직 없을 수 있으므로, #animated-bg를 직접 찾음
+            const container = document.getElementById('animated-bg');
+            if (!container) return; // 만약의 경우
+
             const words = [
-                '국어', '수학', '과학', '영어', '역사', '사회', 'Atom', '앙금', '프로젝트', 
-                '논술', '삼각형', '화학', '예술', '지구과학', 'Literature', 'Calculus', 
+                '국어', '수학', '과학', '영어', '역사', '사회', '미술', '음악', '코딩', 
+                '논술', '물리', '화학', '생명', '지구과학', 'Literature', 'Calculus', 
                 'Science', 'English', 'History', 'Coding', 'Physics', 'Chemistry',
-                '100%!!!', 'Data', 'React', 'Python', '복사', 'C++', 'Never Give Up!'
+                'Algorithm', 'Data', 'React', 'Python', 'Java', 'C++', 'Node.js'
             ];
-            const container = dom.animatedBg;
             const wordCount = 40; // 단어 밀도
 
             for (let i = 0; i < wordCount; i++) {
@@ -589,6 +546,60 @@
         // --- 초기화 ---
 
         async function initialize() {
+            
+            // ⭐️ FIX: DOMContentLoaded 이후에 dom 객체를 초기화
+            dom = {
+                loadingOverlay: document.getElementById('loading-overlay'),
+                animatedBg: document.getElementById('animated-bg'),
+                // 메인
+                mainScreen: document.getElementById('main-screen'),
+                mainTitle: document.getElementById('main-title'), // H1 (Flash Card)
+                adminPanelBtn: document.getElementById('main-admin-btn'),
+                reverseToggle: document.getElementById('reverse-mode-toggle'),
+                searchBar: document.getElementById('search-bar'),
+                problemListHeader: document.getElementById('problem-list-header'), // H2 (문제 리스트)
+                problemListContainer: document.getElementById('problem-list-container'),
+                noPublicSets: document.getElementById('no-public-sets'),
+                startQuizBtn: document.getElementById('start-quiz-btn'),
+                // 관리자 로그인
+                adminLoginScreen: document.getElementById('admin-login-screen'),
+                passwordInput: document.getElementById('admin-password-input'),
+                loginBtn: document.getElementById('admin-login-btn'),
+                loginError: document.getElementById('login-error'),
+                adminLoginBackBtn: document.getElementById('admin-login-back-btn'),
+                // 관리자 패널
+                adminPanelScreen: document.getElementById('admin-panel-screen'),
+                adminPanelBackBtn: document.getElementById('admin-panel-back-btn'),
+                adminAddSetBtn: document.getElementById('admin-add-set-btn'),
+                adminProblemList: document.getElementById('admin-problem-list'),
+                // 관리자 수정
+                adminEditScreen: document.getElementById('admin-edit-screen'),
+                adminEditBackBtn: document.getElementById('admin-edit-back-btn'),
+                editScreenTitle: document.getElementById('edit-screen-title'),
+                saveSetBtn: document.getElementById('save-set-btn'),
+                editSetId: document.getElementById('edit-set-id'),
+                setTitleInput: document.getElementById('set-title-input'),
+                setDescriptionInput: document.getElementById('set-description-input'),
+                addQaPairBtn: document.getElementById('add-qa-pair-btn'),
+                qaListContainer: document.getElementById('qa-list-container'),
+                // 퀴즈
+                quizScreen: document.getElementById('quiz-screen'),
+                pauseBtn: document.getElementById('pause-btn'),
+                quizProgress: document.getElementById('quiz-progress'),
+                questionText: document.getElementById('question-text'),
+                answerInput: document.getElementById('answer-input'),
+                feedbackMessage: document.getElementById('feedback-message'),
+                nextQuestionBtn: document.getElementById('next-question-btn'),
+                // 모달
+                pauseModal: document.getElementById('pause-modal'),
+                continueQuizBtn: document.getElementById('continue-quiz-btn'),
+                quitQuizBtn: document.getElementById('quit-quiz-btn'),
+                retakeModal: document.getElementById('retake-modal'),
+                alertModal: document.getElementById('alert-modal'),
+                alertMessage: document.getElementById('alert-message'),
+                alertOkBtn: document.getElementById('alert-ok-btn'),
+            };
+
             // DOM 스크린 객체화
             screens.mainScreen = dom.mainScreen;
             screens.adminLoginScreen = dom.adminLoginScreen;
@@ -638,7 +649,8 @@
                                 userId = userCredential.user.uid;
                                 console.log("Signed in anonymously:", userId);
                                 resolve();
-                            } catch (error) {
+                            } catch (error)
+ {
                                 console.error("Anonymous sign-in error:", error);
                                 reject(error);
                             }
