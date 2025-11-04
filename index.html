@@ -103,7 +103,7 @@
         }
 
         /* 모달 (항상 흰색 텍스트) */
-        #pause-modal, #retake-modal, #alert-modal {
+        #pause-modal, #retake-modal, #alert-modal, #paste-modal {
             color: white;
         }
 
@@ -339,11 +339,17 @@
             </div>
 
             <!-- 문제/정답 목록 --><div class="max-w-2xl mx-auto">
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex justify-between items-center mb-4 gap-2"> <!-- gap-2 추가 -->
                     <h2 class="text-2xl font-semibold">문제/정답 목록</h2>
-                    <button id="add-qa-pair-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
-                        + 문제 추가하기
-                    </button>
+                    <div class="flex gap-2"> <!-- 버튼 그룹 -->
+                        <!-- ⭐️ 'Sheets에서 붙여넣기' 버튼 추가 -->
+                        <button id="paste-from-sheets-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
+                            Sheets에서 붙여넣기
+                        </button>
+                        <button id="add-qa-pair-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
+                            + 문제 추가하기
+                        </button>
+                    </div>
                 </div>
                 <div id="qa-list-container" class="space-y-4">
                     <!-- JS로 Q&A 쌍 렌더링 --></div>
@@ -406,6 +412,23 @@
         </div>
     </div>
 
+    <!-- ⭐️ 9. Sheets 붙여넣기 모달 추가 --><div id="paste-modal" class="screen flex-col justify-center items-center z-50 text-white"> <!-- text-white 고정 -->
+        <div class="fixed inset-0 bg-black bg-opacity-80"></div>
+        <div class="relative z-10 bg-gray-800 p-8 rounded-2xl shadow-xl max-w-lg w-full mx-4">
+            <h2 class="text-2xl font-bold mb-4 text-white">Google Sheets에서 붙여넣기</h2>
+            <p class="text-gray-300 mb-4">Google Sheets에서 A열(문제)과 B열(정답)을 복사한 후, 아래 칸에 붙여넣으세요. (N번째 행이 N번째 문제가 됩니다)</p>
+            <textarea id="sheets-paste-input" rows="10" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="여기에 붙여넣기 (예: A열 B열 복사)"></textarea>
+            <div class="flex justify-end gap-4 mt-6">
+                <button id="cancel-paste-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">
+                    취소
+                </button>
+                <button id="import-sheets-data-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">
+                    불러오기
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK --><script type="module">
         // Firebase (제공된 내용 대신 캔버스 환경 변수 사용)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -430,7 +453,7 @@
             getDocs, 
             serverTimestamp,
             setLogLevel,
-            increment // ⭐️ 1. 완료 횟수 카운트를 위해 'increment' 임포트
+            increment // 완료 횟수 카운트를 위해 'increment' 임포트
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let firebaseConfig, appId;
@@ -473,7 +496,7 @@
             isRetakeRound: false
         };
 
-        // ⭐️ FIX: dom 객체를 전역(let)으로 선언만 함
+        // dom 객체를 전역(let)으로 선언만 함
         const screens = {};
         let dom;
 
@@ -492,11 +515,11 @@
 
         // 화면 전환
         function showScreen(screenId) {
-            if (screenId !== 'alertModal' && screenId !== 'pauseModal' && screenId !== 'retakeModal') {
+            if (screenId !== 'alertModal' && screenId !== 'pauseModal' && screenId !== 'retakeModal' && screenId !== 'pasteModal') {
                 lastActiveScreen = screenId;
             }
             Object.values(screens).forEach(screen => {
-                // ⭐️ FIX: screen이 null일 경우를 대비 (DOM 초기화 전/실패)
+                // screen이 null일 경우를 대비 (DOM 초기화 전/실패)
                 if (screen) screen.classList.remove('active');
             });
             if (screens[screenId]) {
@@ -504,7 +527,7 @@
             }
             
             // 퀴즈 화면이 아닐 때는 배경 보이기
-            // ⭐️ FIX: dom이 초기화된 후에만 .style 접근
+            // dom이 초기화된 후에만 .style 접근
             if (dom && dom.animatedBg && screenId !== 'quizScreen') {
                 dom.animatedBg.style.display = 'block';
             }
@@ -518,7 +541,7 @@
 
         // 배경 단어 생성
         function generateBackgroundWords() {
-            // ⭐️ FIX: dom이 아직 없을 수 있으므로, #animated-bg를 직접 찾음
+            // dom이 아직 없을 수 있으므로, #animated-bg를 직접 찾음
             const container = document.getElementById('animated-bg');
             if (!container) return; // 만약의 경우
 
@@ -547,7 +570,7 @@
 
         async function initialize() {
             
-            // ⭐️ FIX: DOMContentLoaded 이후에 dom 객체를 초기화
+            // DOMContentLoaded 이후에 dom 객체를 초기화
             dom = {
                 loadingOverlay: document.getElementById('loading-overlay'),
                 animatedBg: document.getElementById('animated-bg'),
@@ -582,6 +605,7 @@
                 setDescriptionInput: document.getElementById('set-description-input'),
                 addQaPairBtn: document.getElementById('add-qa-pair-btn'),
                 qaListContainer: document.getElementById('qa-list-container'),
+                pasteFromSheetsBtn: document.getElementById('paste-from-sheets-btn'), // ⭐️ Sheets 버튼 추가
                 // 퀴즈
                 quizScreen: document.getElementById('quiz-screen'),
                 pauseBtn: document.getElementById('pause-btn'),
@@ -598,6 +622,10 @@
                 alertModal: document.getElementById('alert-modal'),
                 alertMessage: document.getElementById('alert-message'),
                 alertOkBtn: document.getElementById('alert-ok-btn'),
+                pasteModal: document.getElementById('paste-modal'), // ⭐️ Sheets 모달 추가
+                sheetsPasteInput: document.getElementById('sheets-paste-input'),
+                cancelPasteBtn: document.getElementById('cancel-paste-btn'),
+                importSheetsDataBtn: document.getElementById('import-sheets-data-btn'),
             };
 
             // DOM 스크린 객체화
@@ -609,6 +637,7 @@
             screens.pauseModal = dom.pauseModal;
             screens.retakeModal = dom.retakeModal;
             screens.alertModal = dom.alertModal;
+            screens.pasteModal = dom.pasteModal; // ⭐️ Sheets 스크린 추가
 
             // 배경 생성
             generateBackgroundWords();
@@ -738,7 +767,7 @@
                             <p class="text-gray-300 mt-1">${set.description || '설명 없음'}</p>
                             <p class="text-sm text-gray-400 mt-2">
                                 최종 수정: ${formatDate(set.lastModified)}
-                                <!-- ⭐️ 2. 완료 횟수 표시 -->
+                                <!-- 완료 횟수 표시 -->
                                 <span class="ml-3 font-medium text-yellow-400">(${set.completionCount || 0}회 완료됨)</span>
                             </p>
                         </div>
@@ -773,7 +802,7 @@
                         <p class="text-gray-300">${set.description || '설명 없음'}</p>
                         <p class="text-sm text-gray-500">
                             수정: ${formatDate(set.lastModified)}
-                            <!-- ⭐️ 2. (관리자) 완료 횟수 표시 -->
+                            <!-- (관리자) 완료 횟수 표시 -->
                             <span class="ml-3 font-medium text-yellow-500">(${set.completionCount || 0}회 완료)</span>
                         </p>
                     </div>
@@ -812,6 +841,7 @@
         }
 
         function escapeHtml(str) {
+            // " (따옴표)만 &quot;로 이스케이프하여 input value 속성 오류 방지
             return str.replace(/"/g, '&quot;');
         }
 
@@ -846,6 +876,17 @@
             dom.adminEditBackBtn.addEventListener('click', () => showScreen('adminPanelScreen'));
             dom.addQaPairBtn.addEventListener('click', () => renderQAPair());
             dom.saveSetBtn.addEventListener('click', handleSaveSet);
+            
+            // ⭐️ Sheets 붙여넣기 모달 이벤트
+            dom.pasteFromSheetsBtn.addEventListener('click', () => {
+                dom.sheetsPasteInput.value = ''; // 입력창 비우기
+                showScreen('pasteModal');
+            });
+            dom.cancelPasteBtn.addEventListener('click', () => {
+                showScreen('adminEditScreen'); // 수정 화면으로 복귀
+            });
+            dom.importSheetsDataBtn.addEventListener('click', handleImportFromSheets);
+
 
             // 퀴즈
             dom.pauseBtn.addEventListener('click', () => showScreen('pauseModal'));
@@ -977,6 +1018,39 @@
             showScreen('adminEditScreen');
         }
 
+        // ⭐️ 관리자: Sheets 붙여넣기 파싱
+        function handleImportFromSheets() {
+            const text = dom.sheetsPasteInput.value.trim();
+            if (!text) {
+                showAlert("붙여넣을 데이터가 없습니다.");
+                return;
+            }
+
+            const rows = text.split('\n'); // 1. 행(N)으로 분리
+            let importedCount = 0;
+
+            rows.forEach(row => {
+                const cols = row.split('\t'); // 2. 열(A, B)로 분리 (탭 기준)
+                
+                if (cols.length >= 2) {
+                    const question = cols[0].trim(); // A열 (문제)
+                    const answer = cols[1].trim();   // B열 (정답)
+
+                    if (question && answer) {
+                        renderQAPair(question, answer);
+                        importedCount++;
+                    }
+                }
+            });
+
+            if (importedCount > 0) {
+                showAlert(`${importedCount}개의 문제가 목록에 추가되었습니다. (기존 목록은 유지됩니다)`);
+                showScreen('adminEditScreen'); // 수정 화면으로 복귀
+            } else {
+                showAlert("유효한 문제/정답 데이터를 찾지 못했습니다. A열과 B열을 복사했는지 확인하세요.");
+            }
+        }
+
         // 관리자: 저장
         async function handleSaveSet() {
             const title = dom.setTitleInput.value.trim();
@@ -1020,7 +1094,7 @@
                 } else {
                     // 새로 추가 (기본 비공개)
                     setData.isPublic = false;
-                    setData.completionCount = 0; // ⭐️ 3. 새로 만들 때 0으로 초기화
+                    setData.completionCount = 0; // 새로 만들 때 0으로 초기화
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'flashcard-sets'), setData);
                 }
                 showLoading(false);
@@ -1064,7 +1138,7 @@
 
         // --- 퀴즈 로직 ---
 
-        // ⭐️ 4. 완료 횟수 증가 함수
+        // 완료 횟수 증가 함수
         async function incrementCompletionCount(setId) {
             if (!setId) return;
             console.log(`Incrementing completion count for set: ${setId}`);
@@ -1179,7 +1253,7 @@
             } else {
                 // 모든 문제를 맞힘 (또는 오답 재풀이 종료)
                 
-                // ⭐️ 5. 퀴즈를 성공적으로 완료했으므로 카운트 증가
+                // 퀴즈를 성공적으로 완료했으므로 카운트 증가
                 incrementCompletionCount(selectedSetId); 
 
                 const message = currentQuiz.isRetakeRound ? "오답 정복 완료! 메인으로 돌아갑니다." : "완벽합니다! 모든 문제를 맞혔습니다.";
