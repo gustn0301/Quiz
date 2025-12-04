@@ -216,13 +216,33 @@
             opacity: 0.6;
         }
 
+        /* 거꾸로 모드: '연습하기' 버튼 색상 반전 */
+        body.reverse-active #practice-btn:not(:disabled) {
+            background-color: #ffffff; /* 흰색 배경 */
+            color: #2563EB; /* 파란색 텍스트 (blue-600) */
+        }
+        body.reverse-active #practice-btn:not(:disabled):hover {
+            background-color: #e5e5e5;
+        }
+        body.reverse-active #practice-btn:disabled {
+            background-color: #374151;
+            color: #9ca3af;
+            opacity: 0.6;
+        }
+
         /* 거꾸로 모드: 검색창/리스트창 밝게 */
         body.reverse-active #search-bar {
             background-color: rgba(255, 255, 255, 0.15);
             border-color: rgba(255, 255, 255, 0.3);
         }
-        body.reverse-active #problem-list-container {
+        body.reverse-active #problem-list-container,
+        body.reverse-active #practice-list-container {
             background-color: rgba(255, 255, 255, 0.08);
+        }
+        
+        /* 거꾸로 모드: H2 태그 */
+        body.reverse-active h2 {
+            color: white !important;
         }
     </style>
 </head>
@@ -276,11 +296,31 @@
                 <p id="no-public-sets" class="text-center">공개된 문제 세트가 없습니다.</p>
             </div>
 
-            <!-- 문제 풀이 시작 버튼 (고정) -->
-            <div class="mt-6 flex-shrink-0">
+            <!-- 버튼 영역 (고정) -->
+            <div class="mt-6 flex-shrink-0 space-y-3">
                 <button id="start-quiz-btn" class="w-full bg-green-600 hover:bg-green-700 text-white text-xl font-bold py-4 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                     문제 세트를 선택하세요
                 </button>
+                <!-- ⭐️ 연습하기 버튼 추가 -->
+                <button id="practice-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    연습하기 (문제 목록 보기)
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- ⭐️ 1-1. 연습하기 목록 화면 -->
+    <div id="practice-list-screen" class="screen flex-col p-6 md:p-10">
+        <header class="flex justify-between items-center mb-6 flex-shrink-0">
+            <button id="practice-list-back-btn" class="text-3xl hover:text-indigo-400 transition-colors">←</button>
+            <h1 class="text-3xl font-bold">연습하기</h1>
+            <div class="w-8"></div> <!-- Spacer -->
+        </header>
+
+        <main class="flex-1 flex flex-col min-h-0">
+            <h2 class="text-2xl font-semibold mb-4 flex-shrink-0">문제 선택 (클릭하여 풀기)</h2>
+            <div id="practice-list-container" class="flex-1 overflow-y-auto space-y-3 p-2 bg-black bg-opacity-10 rounded-lg">
+                <!-- JS로 문제 리스트 렌더링 -->
             </div>
         </main>
     </div>
@@ -342,7 +382,7 @@
                 <div class="flex justify-between items-center mb-4 gap-2"> <!-- gap-2 추가 -->
                     <h2 class="text-2xl font-semibold">문제/정답 목록</h2>
                     <div class="flex gap-2"> <!-- 버튼 그룹 -->
-                        <!-- ⭐️ 'Sheets에서 붙여넣기' 버튼 추가 -->
+                        <!-- Sheets에서 붙여넣기 버튼 -->
                         <button id="paste-from-sheets-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
                             Sheets에서 붙여넣기
                         </button>
@@ -365,16 +405,16 @@
             <div id="quiz-progress" class="text-lg font-medium">1 / 10</div>
         </header>
         
-        <!-- 문제 (HTML 구조 복구) --><div class="flex-1 flex flex-col justify-center items-center text-center px-4">
+        <!-- 문제 --><div class="flex-1 flex flex-col justify-center items-center text-center px-4">
             <div id="question-text" class="text-4xl md:text-6xl font-bold mb-12 p-6 bg-gray-800 rounded-2xl min-h-[150px] flex items-center justify-center w-full max-w-3xl">
                 Question
             </div>
 
-            <!-- 답안 입력 (HTML 구조 복구) --><input type="text" id="answer-input" placeholder="정답을 입력하세요" class="w-full max-w-xl p-4 text-2xl rounded-lg bg-gray-700 border border-gray-600 text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-500" autocomplete="off">
+            <!-- 답안 입력 --><input type="text" id="answer-input" placeholder="정답을 입력하세요" class="w-full max-w-xl p-4 text-2xl rounded-lg bg-gray-700 border border-gray-600 text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-500" autocomplete="off">
 
-            <!-- 피드백 (HTML 구조 복구) --><div id="feedback-message" class="mt-6 text-2xl font-semibold h-10"></div>
+            <!-- 피드백 --><div id="feedback-message" class="mt-6 text-2xl font-semibold h-10"></div>
             
-            <!-- 다음 버튼 (HTML 구조 복구) --><button id="next-question-btn" class="hidden mt-4 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg">
+            <!-- 다음 버튼 --><button id="next-question-btn" class="hidden mt-4 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg">
                 다음 →
             </button>
         </div>
@@ -412,7 +452,7 @@
         </div>
     </div>
 
-    <!-- ⭐️ 9. Sheets 붙여넣기 모달 추가 --><div id="paste-modal" class="screen flex-col justify-center items-center z-50 text-white"> <!-- text-white 고정 -->
+    <!-- 9. Sheets 붙여넣기 모달 --><div id="paste-modal" class="screen flex-col justify-center items-center z-50 text-white"> <!-- text-white 고정 -->
         <div class="fixed inset-0 bg-black bg-opacity-80"></div>
         <div class="relative z-10 bg-gray-800 p-8 rounded-2xl shadow-xl max-w-lg w-full mx-4">
             <h2 class="text-2xl font-bold mb-4 text-white">Google Sheets에서 붙여넣기</h2>
@@ -493,7 +533,8 @@
             questions: [],
             currentIndex: 0,
             incorrectAnswers: [],
-            isRetakeRound: false
+            isRetakeRound: false,
+            mode: 'normal' // 'normal' | 'retake' | 'practice' (1문제 연습)
         };
 
         // dom 객체를 전역(let)으로 선언만 함
@@ -584,6 +625,11 @@
                 problemListContainer: document.getElementById('problem-list-container'),
                 noPublicSets: document.getElementById('no-public-sets'),
                 startQuizBtn: document.getElementById('start-quiz-btn'),
+                practiceBtn: document.getElementById('practice-btn'), // ⭐️ 연습하기 버튼
+                // 연습하기 목록
+                practiceListScreen: document.getElementById('practice-list-screen'),
+                practiceListBackBtn: document.getElementById('practice-list-back-btn'),
+                practiceListContainer: document.getElementById('practice-list-container'),
                 // 관리자 로그인
                 adminLoginScreen: document.getElementById('admin-login-screen'),
                 passwordInput: document.getElementById('admin-password-input'),
@@ -605,7 +651,7 @@
                 setDescriptionInput: document.getElementById('set-description-input'),
                 addQaPairBtn: document.getElementById('add-qa-pair-btn'),
                 qaListContainer: document.getElementById('qa-list-container'),
-                pasteFromSheetsBtn: document.getElementById('paste-from-sheets-btn'), // ⭐️ Sheets 버튼 추가
+                pasteFromSheetsBtn: document.getElementById('paste-from-sheets-btn'), // Sheets 버튼
                 // 퀴즈
                 quizScreen: document.getElementById('quiz-screen'),
                 pauseBtn: document.getElementById('pause-btn'),
@@ -622,7 +668,7 @@
                 alertModal: document.getElementById('alert-modal'),
                 alertMessage: document.getElementById('alert-message'),
                 alertOkBtn: document.getElementById('alert-ok-btn'),
-                pasteModal: document.getElementById('paste-modal'), // ⭐️ Sheets 모달 추가
+                pasteModal: document.getElementById('paste-modal'), // Sheets 모달
                 sheetsPasteInput: document.getElementById('sheets-paste-input'),
                 cancelPasteBtn: document.getElementById('cancel-paste-btn'),
                 importSheetsDataBtn: document.getElementById('import-sheets-data-btn'),
@@ -630,6 +676,7 @@
 
             // DOM 스크린 객체화
             screens.mainScreen = dom.mainScreen;
+            screens.practiceListScreen = dom.practiceListScreen; // ⭐️ 추가
             screens.adminLoginScreen = dom.adminLoginScreen;
             screens.adminPanelScreen = dom.adminPanelScreen;
             screens.adminEditScreen = dom.adminEditScreen;
@@ -637,7 +684,7 @@
             screens.pauseModal = dom.pauseModal;
             screens.retakeModal = dom.retakeModal;
             screens.alertModal = dom.alertModal;
-            screens.pasteModal = dom.pasteModal; // ⭐️ Sheets 스크린 추가
+            screens.pasteModal = dom.pasteModal;
 
             // 배경 생성
             generateBackgroundWords();
@@ -781,6 +828,38 @@
             });
         }
 
+        // ⭐️ 연습하기 목록 렌더링
+        function renderPracticeList(questions) {
+            dom.practiceListContainer.innerHTML = '';
+            
+            // 거꾸로 모드 반영
+            let displayQuestions = questions;
+            if (isReverseMode) {
+                displayQuestions = questions.map(q => ({ q: q.a, a: q.q, original: q }));
+            }
+
+            displayQuestions.forEach((item, index) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'p-4 border border-gray-600 rounded-lg bg-gray-800 hover:bg-gray-700 cursor-pointer text-white flex justify-between items-center';
+                
+                // 연습 목록에서는 정답을 살짝 보여주거나 숨길 수 있음. 여기선 문제만 크게 표시.
+                itemEl.innerHTML = `
+                    <div class="flex-1">
+                        <span class="text-indigo-400 font-bold mr-2">Q${index + 1}.</span>
+                        <span class="text-lg font-bold">${item.q}</span>
+                    </div>
+                    <div class="text-sm text-gray-400">연습하기 &gt;</div>
+                `;
+
+                itemEl.addEventListener('click', () => {
+                    // 해당 문제만 가지고 연습 시작
+                    startPracticeQuestion(item, index + 1);
+                });
+
+                dom.practiceListContainer.appendChild(itemEl);
+            });
+        }
+
         // 관리자 화면 문제 리스트 렌더링
         function renderAdminProblemList(sets) {
             dom.adminProblemList.innerHTML = '';
@@ -857,6 +936,11 @@
             dom.reverseToggle.addEventListener('change', handleReverseToggle);
             dom.searchBar.addEventListener('input', () => renderMainProblemList(publicProblemSets));
             dom.startQuizBtn.addEventListener('click', handleStartQuiz);
+            // ⭐️ 연습하기 버튼 이벤트
+            dom.practiceBtn.addEventListener('click', handlePracticeMode);
+
+            // 연습하기 목록
+            dom.practiceListBackBtn.addEventListener('click', () => showScreen('mainScreen'));
 
             // 관리자 로그인
             dom.loginBtn.addEventListener('click', handleAdminLogin);
@@ -877,7 +961,7 @@
             dom.addQaPairBtn.addEventListener('click', () => renderQAPair());
             dom.saveSetBtn.addEventListener('click', handleSaveSet);
             
-            // ⭐️ Sheets 붙여넣기 모달 이벤트
+            // Sheets 붙여넣기 모달 이벤트
             dom.pasteFromSheetsBtn.addEventListener('click', () => {
                 dom.sheetsPasteInput.value = ''; // 입력창 비우기
                 showScreen('pasteModal');
@@ -889,7 +973,14 @@
 
 
             // 퀴즈
-            dom.pauseBtn.addEventListener('click', () => showScreen('pauseModal'));
+            dom.pauseBtn.addEventListener('click', () => {
+                // 연습 모드에서는 그냥 나가기 버튼 역할
+                if (currentQuiz.mode === 'practice') {
+                    showScreen('practiceListScreen');
+                } else {
+                    showScreen('pauseModal');
+                }
+            });
             dom.continueQuizBtn.addEventListener('click', () => showScreen('quizScreen'));
             dom.quitQuizBtn.addEventListener('click', () => {
                 showScreen('mainScreen');
@@ -897,7 +988,7 @@
             dom.nextQuestionBtn.addEventListener('click', nextQuestion);
             dom.answerInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    // 피드백이 보이는 상태(틀린 상태)면 다음으로, 아니면 정답 확인
+                    // 피드백이 보이는 상태(틀린 상태 또는 정답 상태)면 다음으로
                     if (dom.feedbackMessage.textContent && !dom.nextQuestionBtn.classList.contains('hidden')) {
                         nextQuestion();
                     } else if (!dom.feedbackMessage.textContent) {
@@ -965,9 +1056,40 @@
             // 버튼 활성화 및 텍스트 변경
             dom.startQuizBtn.disabled = false;
             dom.startQuizBtn.textContent = `'${setTitle}' 세트 풀이 시작하기`;
+            
+            // ⭐️ 연습하기 버튼 활성화
+            dom.practiceBtn.disabled = false;
         }
 
-        // 메인: 퀴즈 시작
+        // ⭐️ 연습하기 모드 진입 (목록 보기)
+        function handlePracticeMode() {
+            if (!selectedSetId) return;
+            const set = publicProblemSets.find(s => s.id === selectedSetId);
+            if (!set || !set.questions || set.questions.length === 0) {
+                showAlert("문제가 없는 세트입니다.");
+                return;
+            }
+
+            renderPracticeList(set.questions);
+            showScreen('practiceListScreen');
+        }
+
+        // ⭐️ 1문제 연습 시작
+        function startPracticeQuestion(questionItem, displayIndex) {
+            currentQuiz = {
+                questions: [questionItem], // 1문제만 배열에 담음
+                currentIndex: 0,
+                incorrectAnswers: [],
+                isRetakeRound: false,
+                mode: 'practice', // 연습 모드 플래그
+                displayIndex: displayIndex // 표시용 번호
+            };
+
+            showScreen('quizScreen');
+            loadQuestion();
+        }
+
+        // 메인: 퀴즈 시작 (전체 풀기)
         function handleStartQuiz() {
             if (!selectedSetId) return;
 
@@ -1018,7 +1140,7 @@
             showScreen('adminEditScreen');
         }
 
-        // ⭐️ 관리자: Sheets 붙여넣기 파싱
+        // 관리자: Sheets 붙여넣기 파싱
         function handleImportFromSheets() {
             const text = dom.sheetsPasteInput.value.trim();
             if (!text) {
@@ -1175,7 +1297,8 @@
                 questions: shuffle(preparedQuestions),
                 currentIndex: 0,
                 incorrectAnswers: [],
-                isRetakeRound: false
+                isRetakeRound: false,
+                mode: 'normal' // 일반 퀴즈 모드
             };
 
             showScreen('quizScreen');
@@ -1193,11 +1316,18 @@
             dom.questionText.textContent = q.q;
             dom.answerInput.value = '';
             dom.answerInput.disabled = false;
+            dom.answerInput.focus(); // 포커스
             dom.feedbackMessage.textContent = '';
             dom.feedbackMessage.className = 'mt-6 text-2xl font-semibold h-10';
             dom.nextQuestionBtn.classList.add('hidden');
             
-            dom.quizProgress.textContent = `${currentQuiz.currentIndex + 1} / ${currentQuiz.questions.length}`;
+            // 연습 모드면 "연습 문제 Q(번호)"로 표시, 아니면 진행도 표시
+            if (currentQuiz.mode === 'practice') {
+                dom.quizProgress.textContent = `연습 문제 Q${currentQuiz.displayIndex}`;
+                // 연습 모드에서는 나가기 버튼 모양 변경 (|| 대신 <- ?) 일단은 유지하되 동작만 변경
+            } else {
+                dom.quizProgress.textContent = `${currentQuiz.currentIndex + 1} / ${currentQuiz.questions.length}`;
+            }
 
             // 오토 포커스
             setTimeout(() => dom.answerInput.focus(), 100);
@@ -1207,6 +1337,29 @@
             const userAnswer = dom.answerInput.value; // 띄어쓰기 유지 (trim() 제거)
             const correctAnswer = currentQuiz.questions[currentQuiz.currentIndex].a;
 
+            // ⭐️ 연습 모드: 틀려도 계속 풀게 함
+            if (currentQuiz.mode === 'practice') {
+                 if (userAnswer === correctAnswer) {
+                    dom.answerInput.disabled = true;
+                    dom.feedbackMessage.textContent = '정답입니다! 완벽해요.';
+                    dom.feedbackMessage.classList.add('text-green-400');
+                    
+                    // 다음 버튼을 '목록으로' 버튼으로 재활용
+                    dom.nextQuestionBtn.textContent = "목록으로";
+                    dom.nextQuestionBtn.classList.remove('hidden');
+                    // 클릭 이벤트는 nextQuestion()이 처리하고 거기서 분기함
+                 } else {
+                    // 틀렸을 때
+                    dom.feedbackMessage.textContent = '틀렸습니다. 다시 시도해보세요.';
+                    dom.feedbackMessage.className = 'mt-6 text-2xl font-semibold h-10 text-red-400';
+                    // 입력창 잠그지 않음 (계속 시도)
+                    dom.answerInput.value = ''; 
+                    dom.answerInput.focus();
+                 }
+                 return;
+            }
+
+            // 일반 모드 로직
             dom.answerInput.disabled = true;
             
             // 6. 대소문자, 띄어쓰기 구분 (완전 일치)
@@ -1222,6 +1375,7 @@
                 // 오답
                 dom.feedbackMessage.textContent = `틀렸습니다. 정답은: ${correctAnswer}`;
                 dom.feedbackMessage.classList.add('text-red-400');
+                dom.nextQuestionBtn.textContent = "다음 →";
                 dom.nextQuestionBtn.classList.remove('hidden');
 
                 // 6. 오답 문제 기록
@@ -1230,6 +1384,12 @@
         }
 
         function nextQuestion() {
+            // ⭐️ 연습 모드: 정답 맞히고 '목록으로' 눌렀을 때
+            if (currentQuiz.mode === 'practice') {
+                showScreen('practiceListScreen');
+                return;
+            }
+
             currentQuiz.currentIndex++;
             loadQuestion();
         }
@@ -1244,7 +1404,8 @@
                         questions: shuffle(currentQuiz.incorrectAnswers), // 오답 목록으로 재설정
                         currentIndex: 0,
                         incorrectAnswers: [], // 오답 목록 초기화
-                        isRetakeRound: true
+                        isRetakeRound: true,
+                        mode: 'retake' // 재풀이 모드
                     };
                     showScreen('quizScreen');
                     loadQuestion();
@@ -1253,8 +1414,10 @@
             } else {
                 // 모든 문제를 맞힘 (또는 오답 재풀이 종료)
                 
-                // 퀴즈를 성공적으로 완료했으므로 카운트 증가
-                incrementCompletionCount(selectedSetId); 
+                // 퀴즈를 성공적으로 완료했으므로 카운트 증가 (일반 모드일 때만)
+                if (currentQuiz.mode !== 'practice') {
+                    incrementCompletionCount(selectedSetId); 
+                }
 
                 const message = currentQuiz.isRetakeRound ? "오답 정복 완료! 메인으로 돌아갑니다." : "완벽합니다! 모든 문제를 맞혔습니다.";
                 showAlert(message, () => {
@@ -1269,4 +1432,3 @@
     </script>
 </body>
 </html>
-
