@@ -1315,6 +1315,7 @@
             const q = currentQuiz.questions[currentQuiz.currentIndex];
             dom.questionText.textContent = q.q;
             dom.answerInput.value = '';
+            dom.answerInput.readOnly = false; // ⭐️ readOnly 해제
             dom.answerInput.disabled = false;
             dom.answerInput.focus(); // 포커스
             dom.feedbackMessage.textContent = '';
@@ -1340,7 +1341,7 @@
             // ⭐️ 연습 모드: 틀려도 계속 풀게 함
             if (currentQuiz.mode === 'practice') {
                  if (userAnswer === correctAnswer) {
-                    dom.answerInput.disabled = true;
+                    dom.answerInput.readOnly = true; // ⭐️ disabled 대신 readOnly
                     dom.feedbackMessage.textContent = '정답입니다! 완벽해요.';
                     dom.feedbackMessage.classList.add('text-green-400');
                     
@@ -1350,20 +1351,21 @@
                     dom.nextQuestionBtn.focus(); // 엔터로 바로 목록 이동 가능하게
                  } else {
                     // 틀렸을 때: 정답 보여주고 다시 풀기 유도
-                    dom.answerInput.disabled = true; // 입력 잠금
+                    dom.answerInput.readOnly = true; // ⭐️ disabled 대신 readOnly
                     dom.feedbackMessage.textContent = `틀렸습니다. 정답은: ${correctAnswer}`;
                     dom.feedbackMessage.className = 'mt-6 text-2xl font-semibold h-10 text-red-400';
                     
                     // 버튼을 '다시 풀기'로 변경
                     dom.nextQuestionBtn.textContent = "다시 풀기";
                     dom.nextQuestionBtn.classList.remove('hidden');
-                    dom.nextQuestionBtn.focus(); // ⭐️ 버튼에 포커스 -> 엔터 누르면 바로 클릭됨
+                    // ⭐️ 버튼 포커스 제거 (입력창 포커스 유지하여 엔터 시 nextQuestion() 호출 유도)
+                    dom.answerInput.focus(); 
                  }
                  return;
             }
 
             // 일반 모드 로직
-            dom.answerInput.disabled = true;
+            dom.answerInput.readOnly = true; // ⭐️ disabled 대신 readOnly
             
             // 6. 대소문자, 띄어쓰기 구분 (완전 일치)
             if (userAnswer === correctAnswer) {
@@ -1380,6 +1382,8 @@
                 dom.feedbackMessage.classList.add('text-red-400');
                 dom.nextQuestionBtn.textContent = "다음 →";
                 dom.nextQuestionBtn.classList.remove('hidden');
+                // ⭐️ 일반 모드 오답 시에도 입력창 포커스 유지 (엔터로 넘어가기 위함)
+                dom.answerInput.focus();
 
                 // 6. 오답 문제 기록
                 currentQuiz.incorrectAnswers.push(currentQuiz.questions[currentQuiz.currentIndex]);
@@ -1392,6 +1396,7 @@
                 if (dom.nextQuestionBtn.textContent === "다시 풀기") {
                     // 다시 풀기: 입력창 초기화 및 재활성화
                     dom.answerInput.value = '';
+                    dom.answerInput.readOnly = false; // ⭐️ readOnly 해제
                     dom.answerInput.disabled = false;
                     dom.answerInput.focus(); // 입력창으로 포커스 이동
                     dom.feedbackMessage.textContent = '';
