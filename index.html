@@ -1347,14 +1347,17 @@
                     // 다음 버튼을 '목록으로' 버튼으로 재활용
                     dom.nextQuestionBtn.textContent = "목록으로";
                     dom.nextQuestionBtn.classList.remove('hidden');
-                    // 클릭 이벤트는 nextQuestion()이 처리하고 거기서 분기함
+                    dom.nextQuestionBtn.focus(); // 엔터로 바로 목록 이동 가능하게
                  } else {
-                    // 틀렸을 때
-                    dom.feedbackMessage.textContent = '틀렸습니다. 다시 시도해보세요.';
+                    // 틀렸을 때: 정답 보여주고 다시 풀기 유도
+                    dom.answerInput.disabled = true; // 입력 잠금
+                    dom.feedbackMessage.textContent = `틀렸습니다. 정답은: ${correctAnswer}`;
                     dom.feedbackMessage.className = 'mt-6 text-2xl font-semibold h-10 text-red-400';
-                    // 입력창 잠그지 않음 (계속 시도)
-                    dom.answerInput.value = ''; 
-                    dom.answerInput.focus();
+                    
+                    // 버튼을 '다시 풀기'로 변경
+                    dom.nextQuestionBtn.textContent = "다시 풀기";
+                    dom.nextQuestionBtn.classList.remove('hidden');
+                    dom.nextQuestionBtn.focus(); // ⭐️ 버튼에 포커스 -> 엔터 누르면 바로 클릭됨
                  }
                  return;
             }
@@ -1384,9 +1387,19 @@
         }
 
         function nextQuestion() {
-            // ⭐️ 연습 모드: 정답 맞히고 '목록으로' 눌렀을 때
+            // ⭐️ 연습 모드: 버튼 기능 분기
             if (currentQuiz.mode === 'practice') {
-                showScreen('practiceListScreen');
+                if (dom.nextQuestionBtn.textContent === "다시 풀기") {
+                    // 다시 풀기: 입력창 초기화 및 재활성화
+                    dom.answerInput.value = '';
+                    dom.answerInput.disabled = false;
+                    dom.answerInput.focus(); // 입력창으로 포커스 이동
+                    dom.feedbackMessage.textContent = '';
+                    dom.nextQuestionBtn.classList.add('hidden');
+                } else {
+                    // 목록으로 돌아가기
+                    showScreen('practiceListScreen');
+                }
                 return;
             }
 
